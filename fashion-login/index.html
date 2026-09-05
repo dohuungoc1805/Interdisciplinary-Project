@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moda Lane | Đăng nhập</title>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="login-page">
+    <section class="brand-panel" aria-label="Moda Lane">
+      <a class="brand-mark" href="#" aria-label="Moda Lane">
+        <span>ML</span>
+        Moda Lane
+      </a>
+      <div class="collection-copy">
+        <p class="season">Spring Studio 2026</p>
+        <h1>Phong cách mới, vừa vặn với bạn.</h1>
+        <p>Khám phá các thiết kế ready-to-wear, phụ kiện và ưu đãi dành riêng cho thành viên.</p>
+      </div>
+    </section>
+
+    <section class="login-shell" aria-label="Đăng nhập tài khoản">
+      <form class="login-card">
+        <div class="form-heading">
+          <p>Tài khoản thành viên</p>
+          <h2>Đăng nhập</h2>
+        </div>
+
+        <label class="field">
+          <span>Email</span>
+          <input type="email" name="email" placeholder="ten@email.com" autocomplete="email" required>
+        </label>
+
+        <label class="field">
+          <span>Mật khẩu</span>
+          <input id="password" type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+          <button class="ghost-button" type="button" id="togglePassword" aria-controls="password" aria-label="Hiện mật khẩu">Hiện</button>
+        </label>
+
+        <div class="form-row">
+          <label class="remember">
+            <input type="checkbox" name="remember">
+            <span>Ghi nhớ tôi</span>
+          </label>
+          <a href="#">Quên mật khẩu?</a>
+        </div>
+
+        <button class="primary-button" type="submit">Đăng nhập</button>
+
+        <p class="signup-copy">Chưa có tài khoản? <a href="#">Tạo tài khoản</a></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

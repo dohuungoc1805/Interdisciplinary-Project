@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngoc Đỗ Fashion - Thời Trang Nam Nữ</title>
+    <meta name="description" content="Cửa hàng thời trang nam nữ Ngoc Đỗ - Phong cách hiện đại, chất lượng cao cấp">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="container topbar-inner">
+            <span><i class="fas fa-phone-alt"></i> Hotline: 0123 456 789</span>
+            <span><i class="fas fa-shipping-fast"></i> Miễn phí giao hàng đơn từ 500K</span>
+            <span><i class="fas fa-undo"></i> Đổi trả trong 30 ngày</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">ND</span>
+                <div class="logo-text">
+                    <strong>NGOC ĐỖ</strong>
+                    <small>FASHION</small>
+                </div>
+            </a>
+            <nav class="nav" id="nav">
+                <a href="index.html" class="nav-link active">Trang chủ</a>
+                <a href="#new-arrivals" class="nav-link">Hàng mới</a>
+                <a href="#categories" class="nav-link">Danh mục</a>
+                <a href="#bestsellers" class="nav-link">Bán chạy</a>
+                <a href="#sale" class="nav-link"><span class="sale-badge">SALE</span></a>
+                <a href="#contact" class="nav-link">Liên hệ</a>
+            </nav>
+            <div class="header-actions">
+                <button class="icon-btn" id="searchToggle"><i class="fas fa-search"></i></button>
+                <div class="user-menu-wrap">
+                    <a href="#" class="icon-btn" title="Đăng nhập"><i class="fas fa-user"></i></a>
+                </div>
+                <button class="icon-btn" id="cartToggle"><i class="fas fa-shopping-bag"></i><span class="cart-count"
+                        id="cartCount">0</span></button>
+                <button class="hamburger" id="menuToggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+        <!-- Search overlay -->
+        <div class="search-overlay" id="searchOverlay">
+            <div class="container">
+                <input type="text" placeholder="Tìm kiếm sản phẩm..." class="search-input" id="searchInput">
+                <button class="search-close" id="searchClose"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Decorative background blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+
+    <!-- Hero Banner -->
+    <section class="hero">
+        <div class="hero-slide active">
+            <div class="hero-overlay"></div>
+            <div class="container hero-content">
+                <p class="hero-sub">BST Hè 2026</p>
+                <h1 class="hero-title">Phong Cách<br>Định Nghĩa Bạn</h1>
+                <p class="hero-desc">Khám phá bộ sưu tập mới nhất với thiết kế tinh tế, chất liệu cao cấp dành cho nam
+                    và nữ.</p>
+                <div class="hero-btns">
+                    <a href="#new-arrivals" class="btn btn-primary">Khám phá ngay</a>
+                    <a href="#categories" class="btn btn-outline">Xem danh mục</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features strip -->
+    <section class="features-strip">
+        <div class="container features-grid">
+            <div class="feature-item"><i class="fas fa-truck"></i>
+                <div><strong>Giao hàng nhanh</strong><small>Toàn quốc 1-3 ngày</small></div>
+            </div>
+            <div class="feature-item"><i class="fas fa-shield-alt"></i>
+                <div><strong>Cam kết chính hãng</strong><small>100% authentic</small></div>
+            </div>
+            <div class="feature-item"><i class="fas fa-undo-alt"></i>
+                <div><strong>Đổi trả dễ dàng</strong><small>Trong vòng 30 ngày</small></div>
+            </div>
+            <div class="feature-item"><i class="fas fa-headset"></i>
+                <div><strong>Hỗ trợ 24/7</strong><small>Tư vấn miễn phí</small></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="section" id="categories">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-sub">Danh mục</p>
+                <h2 class="section-title">Thời Trang Nam & Nữ</h2>
+            </div>
+            <div class="category-grid">
+                <a href="#" class="category-card">
+                    <img src="images/cat_men.png" alt="Thời trang nam">
+                    <div class="category-overlay">
+                        <h3>Thời Trang Nam</h3>
+                        <span class="btn btn-sm">Xem ngay <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </a>
+                <a href="#" class="category-card">
+                    <img src="images/cat_women.png" alt="Thời trang nữ">
+                    <div class="category-overlay">
+                        <h3>Thời Trang Nữ</h3>
+                        <span class="btn btn-sm">Xem ngay <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- New Arrivals -->
+    <section class="section section-gray" id="new-arrivals">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-sub">Mới nhất</p>
+                <h2 class="section-title">Hàng Mới Về</h2>
+            </div>
+            <div class="product-grid" id="new-arrivals-grid">
+                <!-- Sample Product 1 -->
+                <div class="product-card" data-id="1" data-name="Áo Sơ Mi Linen" data-price="450000">
+                    <div class="product-img-wrap">
+                        <span class="product-badge new">NEW</span>
+                        <a href="#">
+                            <img src="images/product1.png" alt="Áo Sơ Mi Linen">
+                        </a>
+                        <div class="product-actions">
+                            <button class="pa-btn add-to-cart-btn"><i class="fas fa-shopping-bag"></i></button>
+                            <button class="pa-btn"><i class="fas fa-heart"></i></button>
+                            <a href="#" class="pa-btn"><i class="fas fa-eye"></i></a>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <p class="product-cat">Nam</p>
+                        <h3 class="product-name"><a href="#" style="color:inherit">Áo Sơ Mi Linen Premium</a></h3>
+                        <div class="product-price">
+                            <span class="current">450.000₫</span>
+                        </div>
+                        <div class="product-sizes">
+                            <span>S</span><span>M</span><span>L</span><span>XL</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sample Product 2 -->
+                <div class="product-card" data-id="2" data-name="Váy Hoa Nhí" data-price="590000">
+                    <div class="product-img-wrap">
+                        <span class="product-badge hot">HOT</span>
+                        <a href="#">
+                            <img src="images/product2.png" alt="Váy Hoa Nhí">
+                        </a>
+                        <div class="product-actions">
+                            <button class="pa-btn add-to-cart-btn"><i class="fas fa-shopping-bag"></i></button>
+                            <button class="pa-btn"><i class="fas fa-heart"></i></button>
+                            <a href="#" class="pa-btn"><i class="fas fa-eye"></i></a>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <p class="product-cat">Nữ</p>
+                        <h3 class="product-name"><a href="#" style="color:inherit">Váy Hoa Nhí Vintage</a></h3>
+                        <div class="product-price">
+                            <span class="current">590.000₫</span>
+                            <span class="old">750.000₫</span>
+                        </div>
+                        <div class="product-sizes">
+                            <span>S</span><span>M</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Add more sample products as needed -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Promo Banner -->
+    <section class="promo-banner">
+        <div class="container promo-inner">
+            <div class="promo-text">
+                <p class="promo-sub">Ưu đãi đặc biệt</p>
+                <h2>Giảm đến <span class="highlight">50%</span></h2>
+                <p>Cho bộ sưu tập Hè 2026. Nhanh tay kẻo hết!</p>
+                <a href="#sale" class="btn btn-primary">Mua ngay</a>
+            </div>
+            <div class="promo-countdown" id="countdown">
+                <div class="cd-item"><span id="cd-days">00</span><small>Ngày</small></div>
+                <div class="cd-item"><span id="cd-hours">00</span><small>Giờ</small></div>
+                <div class="cd-item"><span id="cd-mins">00</span><small>Phút</small></div>
+                <div class="cd-item"><span id="cd-secs">00</span><small>Giây</small></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bestsellers -->
+    <section class="section" id="bestsellers">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-sub">Được yêu thích</p>
+                <h2 class="section-title">Sản Phẩm Bán Chạy</h2>
+            </div>
+            <div class="product-grid" id="bestsellers-grid">
+                <!-- Sample Product 3 -->
+                <div class="product-card" data-id="3" data-name="Quần Jean Slimfit" data-price="650000">
+                    <div class="product-img-wrap">
+                        <img src="images/product3.png" alt="Quần Jean Slimfit">
+                        <div class="product-actions">
+                            <button class="pa-btn add-to-cart-btn"><i class="fas fa-shopping-bag"></i></button>
+                            <button class="pa-btn"><i class="fas fa-heart"></i></button>
+                            <button class="pa-btn"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <p class="product-cat">Nam</p>
+                        <h3 class="product-name">Quần Jean Slimfit Co Giãn</h3>
+                        <div class="product-price">
+                            <span class="current">650.000₫</span>
+                        </div>
+                        <div class="product-sizes">
+                            <span>29</span><span>30</span><span>31</span><span>32</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter -->
+    <section class="newsletter" id="sale">
+        <div class="container newsletter-inner">
+            <h2>Đăng ký nhận ưu đãi</h2>
+            <p>Nhận ngay voucher giảm 10% cho đơn hàng đầu tiên</p>
+            <form class="newsletter-form" id="newsletterForm">
+                <input type="email" placeholder="Nhập email của bạn..." required>
+                <button type="submit" class="btn btn-primary">Đăng ký</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Contact -->
+    <section class="section" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-sub">Liên hệ</p>
+                <h2 class="section-title">Kết Nối Với Chúng Tôi</h2>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <div class="ci-item"><i class="fas fa-map-marker-alt"></i>
+                        <div><strong>Địa chỉ</strong>
+                            <p>123 Nguyễn Huệ, Quận 1, TP.HCM</p>
+                        </div>
+                    </div>
+                    <div class="ci-item"><i class="fas fa-phone-alt"></i>
+                        <div><strong>Hotline</strong>
+                            <p>0123 456 789</p>
+                        </div>
+                    </div>
+                    <div class="ci-item"><i class="fas fa-envelope"></i>
+                        <div><strong>Email</strong>
+                            <p>hello@ngocdo.vn</p>
+                        </div>
+                    </div>
+                    <div class="ci-item"><i class="fas fa-clock"></i>
+                        <div><strong>Giờ mở cửa</strong>
+                            <p>8:00 - 22:00 hàng ngày</p>
+                        </div>
+                    </div>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-tiktok"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <form class="contact-form" id="contactForm">
+                    <input type="text" id="contactName" name="name" placeholder="Họ và tên" required>
+                    <input type="email" id="contactEmail" name="email" placeholder="Email" required>
+                    <input type="tel" id="contactPhone" name="phone" placeholder="Số điện thoại">
+                    <textarea id="contactMessage" name="message" placeholder="Nội dung tin nhắn..." rows="4"
+                        required></textarea>
+                    <button type="submit" class="btn btn-primary">Gửi tin nhắn</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <div class="logo footer-logo">
+                    <span class="logo-icon">ND</span>
+                    <div class="logo-text"><strong>NGOC ĐỖ</strong><small>FASHION</small></div>
+                </div>
+                <p>Thương hiệu thời trang nam nữ hàng đầu, mang đến phong cách hiện đại và chất lượng vượt trội.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Về chúng tôi</h4>
+                <a href="#">Giới thiệu</a><a href="#">Tuyển dụng</a><a href="#">Cửa hàng</a><a href="#">Tin tức</a>
+            </div>
+            <div class="footer-col">
+                <h4>Hỗ trợ</h4>
+                <a href="#">Hướng dẫn mua hàng</a><a href="#">Chính sách đổi trả</a><a href="#">Vận chuyển</a><a
+                    href="#">FAQ</a>
+            </div>
+            <div class="footer-col">
+                <h4>Liên hệ</h4>
+                <p><i class="fas fa-map-marker-alt"></i> 123 Nguyễn Huệ, Q.1, HCM</p>
+                <p><i class="fas fa-phone-alt"></i> 0123 456 789</p>
+                <p><i class="fas fa-envelope"></i> hello@ngocdo.vn</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <p>© 2026 Ngoc Đỗ Fashion. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <aside class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3><i class="fas fa-shopping-bag"></i> Giỏ hàng</h3>
+            <button class="cart-close" id="cartClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cart-body" id="cartBody">
+            <p class="cart-empty">Giỏ hàng trống</p>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total"><strong>Tổng cộng:</strong><span id="cartTotal">0₫</span></div>
+            <button class="btn btn-primary btn-block">Thanh toán</button>
+        </div>
+    </aside>
+
+    <!-- Back to top -->
+    <button class="back-to-top" id="backToTop"><i class="fas fa-chevron-up"></i></button>
+
+    <!-- AI Chatbot Widget -->
+    <div class="chatbot-fab" id="chatbotFab" title="Trợ lý AI">
+        <i class="fas fa-robot"></i>
+    </div>
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chatbot-header">
+            <div class="chatbot-header-info"><i class="fas fa-robot"></i> <strong>Trợ lý AI</strong> <small>Ngoc Đỗ
+                    Fashion</small></div>
+            <button class="chatbot-close" id="chatbotClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg bot">
+                <div class="chat-bubble">Xin chào! 👋 Tôi là trợ lý mua sắm AI. Bạn muốn tìm sản phẩm gì? (VD: "áo
+                    polo", "đồ nữ", "sale")</div>
+            </div>
+        </div>
+        <form class="chatbot-input" id="chatbotForm">
+            <input type="text" id="chatbotInput" placeholder="Nhập tin nhắn..." autocomplete="off">
+            <button type="submit"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/chatbot.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Áo Sơ Mi Linen Premium - Ngoc Đỗ Fashion</title>
+    <meta name="description" content="Áo sơ mi linen cao cấp với chất liệu thoáng mát, phong cách lịch lãm.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .product-detail{max-width:900px;margin:120px auto 60px;padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+        .pd-img{border-radius:var(--radius);overflow:hidden;background:var(--bg-gray)}
+        .pd-img img{width:100%;aspect-ratio:3/4;object-fit:cover}
+        .pd-info h1{font-family:var(--font-heading);font-size:2rem;color:var(--primary);margin-bottom:8px}
+        .pd-cat{color:var(--text-light);font-size:.85rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+        .pd-price{font-size:1.6rem;font-weight:700;color:var(--accent);margin-bottom:16px}
+        .pd-old-price{text-decoration:line-through;color:var(--text-light);font-size:1rem;margin-left:12px;font-weight:400}
+        .pd-desc{color:var(--text-light);line-height:1.8;margin-bottom:24px}
+        .pd-sizes{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+        .pd-sizes span{padding:8px 20px;border:2px solid var(--border);border-radius:8px;font-size:.88rem;cursor:pointer;transition:all var(--transition)}
+        .pd-sizes span:hover,.pd-sizes span.active{border-color:var(--accent);color:var(--accent);background:rgba(233,69,96,.05)}
+        .pd-badge{display:inline-block;padding:4px 14px;border-radius:6px;font-size:.78rem;font-weight:700;color:#fff;margin-bottom:16px}
+        .pd-badge.NEW{background:var(--accent)}
+        .pd-badge.HOT{background:var(--gold);color:var(--primary)}
+        .pd-badge.SALE{background:#e53935}
+        @media(max-width:768px){.product-detail{grid-template-columns:1fr;margin-top:80px}}
+    </style>
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">ND</span>
+                <div class="logo-text"><strong>NGOC ĐỖ</strong><small>FASHION</small></div>
+            </a>
+            <nav class="nav" id="nav">
+                <a href="index.html" class="nav-link">Trang chủ</a>
+                <a href="index.html#new-arrivals" class="nav-link">Hàng mới</a>
+                <a href="index.html#categories" class="nav-link">Danh mục</a>
+                <a href="index.html#bestsellers" class="nav-link">Bán chạy</a>
+            </nav>
+            <div class="header-actions">
+                <a href="index.html" class="btn btn-primary" style="padding:10px 20px;font-size:.82rem">← Về trang chủ</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="product-detail">
+        <div class="pd-img">
+            <img src="images/product1.png" alt="Áo Sơ Mi Linen Premium">
+        </div>
+        <div class="pd-info">
+            <div class="pd-header-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                <p class="pd-cat">Thời trang nam</p>
+                <button class="wishlist-btn" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-light)">
+                    <i class="far fa-heart"></i>
+                </button>
+            </div>
+            <h1>Áo Sơ Mi Linen Premium</h1>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px">
+                <div style="color:var(--gold)">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star-half-alt"></i>
+                </div>
+                <small>(12 đánh giá)</small>
+            </div>
+            <div class="pd-price">
+                450.000₫
+                <span class="pd-old-price">550.000₫</span>
+            </div>
+            <p class="pd-desc">Áo sơ mi nam được làm từ chất liệu linen tự nhiên cao cấp, mang lại cảm giác thoáng mát và thoải mái tối đa trong những ngày hè. Thiết kế form dáng hiện đại, dễ dàng phối đồ cho cả phong cách công sở và dạo phố.</p>
+            <p style="font-weight:600;margin-bottom:8px">Kích cỡ:</p>
+            <div class="pd-sizes">
+                <span>S</span>
+                <span class="active">M</span>
+                <span>L</span>
+                <span>XL</span>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:40px">
+                <i class="fas fa-shopping-bag"></i> Thêm vào giỏ hàng
+            </button>
+
+            <!-- Reviews Section -->
+            <div class="pd-reviews" style="border-top:1px solid var(--border); padding-top:40px">
+                <h3>Đánh giá từ khách hàng</h3>
+                
+                <div class="reviews-list" style="margin-top:30px">
+                    <div class="review-item" style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border)">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+                            <strong>Nguyễn Văn A</strong>
+                            <div style="color:var(--gold)">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-light); font-size:0.95rem">Chất vải rất mát, form mặc lên rất đẹp. Giao hàng nhanh!</p>
+                        <small style="color:var(--text-light); font-size:0.8rem">2 ngày trước</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toastContainer" style="position:fixed; top:20px; right:20px; z-index:9999"></div>
+
+    <footer class="footer" style="margin-top:60px">
+        <div class="footer-bottom">
+            <div class="container">
+                <p>© 2026 Ngoc Đỗ Fashion. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    <script src="js/script.js"></script>
+</body>
+</html>
