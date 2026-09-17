@@ -62,7 +62,11 @@ class Product extends Model
             return $this->main_image;
         }
 
-        return Storage::disk('public')->url($this->main_image);
+        if (Storage::disk('public')->exists($this->main_image)) {
+            return Storage::disk('public')->url($this->main_image);
+        }
+
+        return 'https://placehold.co/600x750/f5f5f4/78716c?text='.rawurlencode($this->name ?: 'Sản phẩm');
     }
 
     /** Main image, or first gallery image, or placeholder (for banners/cards). */

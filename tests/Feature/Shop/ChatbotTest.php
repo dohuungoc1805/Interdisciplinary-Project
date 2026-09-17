@@ -12,7 +12,8 @@ class ChatbotTest extends TestCase
 
     public function test_chat_endpoint_returns_reply_contract(): void
     {
-        $this->app->instance(GeminiService::class, new class extends GeminiService {
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
             public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
             {
                 return 'Xin chào, mình có thể giúp bạn chọn sản phẩm.';
@@ -28,7 +29,8 @@ class ChatbotTest extends TestCase
 
     public function test_chat_endpoint_enforces_rate_limit(): void
     {
-        $this->app->instance(GeminiService::class, new class extends GeminiService {
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
             public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
             {
                 return 'ok';
@@ -89,7 +91,8 @@ class ChatbotTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $this->app->instance(GeminiService::class, new class extends GeminiService {
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
             public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
             {
                 return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
@@ -97,7 +100,7 @@ class ChatbotTest extends TestCase
         });
 
         $response = $this->postJson(route('chat'), [
-            'message' => 'Gợi ý áo thun',
+            'message' => 'Mình cao 1m70, nặng 60kg, gợi ý áo thun',
         ]);
 
         $response->assertOk();
@@ -105,5 +108,50 @@ class ChatbotTest extends TestCase
 
         $this->assertStringContainsString('Áo thun basic nam', $reply);
         $this->assertStringContainsString('/products/ao-thun-basic-nam', $reply);
+        $this->assertStringContainsString('Size còn hàng: M', $reply);
+        $this->assertStringContainsString('Size M đang phù hợp', $reply);
+    }
+
+    public function test_chat_recommends_a_size_from_height_and_weight_when_ai_is_unavailable(): void
+    {
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
+            public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
+            {
+                return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
+            }
+        });
+
+        $response = $this->postJson(route('chat'), [
+            'message' => 'Mình cao 1m70 và nặng 60kg, tư vấn size áo giúp mình',
+        ]);
+
+        $response->assertOk();
+        $reply = (string) $response->json('reply');
+
+        $this->assertStringContainsString('size tham khảo của bạn là M', $reply);
+        $this->assertStringContainsString('170 cm', $reply);
+        $this->assertStringContainsString('60.0 kg', $reply);
+    }
+
+    public function test_chat_asks_for_measurements_when_a_size_request_is_incomplete(): void
+    {
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
+            public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
+            {
+                return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
+            }
+        });
+
+        $response = $this->postJson(route('chat'), [
+            'message' => 'Tư vấn size áo giúp mình',
+        ]);
+
+        $response->assertOk();
+        $reply = (string) $response->json('reply');
+
+        $this->assertStringContainsString('chiều cao', $reply);
+        $this->assertStringContainsString('cân nặng', $reply);
     }
 }

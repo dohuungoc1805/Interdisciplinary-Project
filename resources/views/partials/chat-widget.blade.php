@@ -6,7 +6,7 @@
     <div id="chat-messages" class="flex-1 space-y-2 overflow-y-auto bg-[#f7f7f9] p-3 text-sm"></div>
     <form id="chat-form" class="flex gap-2 border-t border-[color:var(--line-soft)] bg-white p-2">
         @csrf
-        <input id="chat-input" class="field-control flex-1 py-2 text-sm" type="text" placeholder="Nhập tin nhắn..." autocomplete="off" />
+        <input id="chat-input" class="field-control flex-1 py-2 text-sm" type="text" placeholder="VD: Cao 170cm, nặng 60kg, tư vấn size áo" autocomplete="off" />
         <button class="rounded-full bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[color:var(--accent-hover)]" type="submit">Gửi</button>
     </form>
 </div>

@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Run app locally
 - `composer dev`
   - Starts Laravel server, queue listener, log tail (`pail`), and Vite dev server concurrently
+- `composer run dev:windows`
+  - Starts Laravel server, queue listener, and Vite on Windows, where `pail` cannot run because PHP does not provide `pcntl`
 
 ### Frontend only
 - `npm run dev` — start Vite dev server

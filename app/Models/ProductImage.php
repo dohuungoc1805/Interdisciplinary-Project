@@ -19,7 +19,11 @@ class ProductImage extends Model
             return $this->path;
         }
 
-        return Storage::disk('public')->url($this->path);
+        if (Storage::disk('public')->exists($this->path)) {
+            return Storage::disk('public')->url($this->path);
+        }
+
+        return 'https://placehold.co/600x750/f5f5f4/78716c?text=Product';
     }
 
     public function product(): BelongsTo

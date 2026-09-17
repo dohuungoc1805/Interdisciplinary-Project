@@ -16,7 +16,7 @@ class ChatbotProductContextService
             ->values();
 
         $query = Product::query()
-            ->with(['category:id,name', 'variants:id,product_id,stock'])
+            ->with(['category:id,name', 'variants:id,product_id,size,stock'])
             ->where('is_active', true);
 
         if ($keywords->isNotEmpty()) {
@@ -41,6 +41,13 @@ class ChatbotProductContextService
 
         return $products->map(function (Product $product) {
             $inStock = $product->variants->sum('stock') > 0;
+            $availableSizes = $product->variants
+                ->filter(fn ($variant) => $variant->stock > 0)
+                ->pluck('size')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
             return [
                 'name' => $product->name,
@@ -54,25 +61,58 @@ class ChatbotProductContextService
                 'rating' => (float) $product->average_rating,
                 'review_count' => (int) $product->review_count,
                 'in_stock' => $inStock,
+                'available_sizes' => $availableSizes,
                 'product_url' => route('products.show', $product->slug),
             ];
         })->all();
     }
 
-    public function fallbackReply(string $message, array $candidates): string
+    public function fallbackReply(
+        string $message,
+        array $candidates,
+        ?array $sizeRecommendation = null,
+        bool $isSizingRequest = false,
+    ): string
     {
+        $sizeLine = $sizeRecommendation !== null
+            ? sprintf(
+                'Theo chiều cao %.0f cm và cân nặng %.1f kg, size tham khảo của bạn là %s. %s',
+                $sizeRecommendation['height_cm'],
+                $sizeRecommendation['weight_kg'],
+                $sizeRecommendation['size'],
+                $sizeRecommendation['note']
+            )
+            : null;
+        $measurementPrompt = $isSizingRequest && $sizeRecommendation === null
+            ? 'Để tư vấn size chính xác hơn, bạn cho mình chiều cao (cm) và cân nặng (kg) nhé. Ví dụ: cao 170cm, nặng 60kg.'
+            : null;
+
         if ($candidates === []) {
-            return 'Mình chưa tìm thấy sản phẩm thật sự phù hợp từ yêu cầu này. Bạn có thể nói rõ thêm kiểu dáng, danh mục hoặc mức giá để mình gợi ý chính xác hơn.';
+            return implode("\n\n", array_filter([
+                $measurementPrompt,
+                $sizeLine,
+                'Mình chưa tìm thấy sản phẩm thật sự phù hợp từ yêu cầu này. Bạn có thể nói rõ thêm kiểu dáng, danh mục hoặc mức giá để mình gợi ý chính xác hơn.',
+            ]));
         }
 
         $lines = [
             'Mình gợi ý một số sản phẩm phù hợp bạn có thể xem ngay:',
         ];
+        if ($sizeLine !== null) {
+            array_unshift($lines, $sizeLine);
+        }
+        if ($measurementPrompt !== null) {
+            array_unshift($lines, $measurementPrompt);
+        }
 
         foreach (array_slice($candidates, 0, 3) as $candidate) {
             $price = number_format((int) $candidate['price'], 0, ',', '.').' ₫';
             $stockText = $candidate['in_stock'] ? 'còn hàng' : 'tạm hết hàng';
             $lines[] = sprintf('- %s (%s, %s): %s', $candidate['name'], $price, $stockText, $candidate['product_url']);
+            $sizeAvailability = $this->sizeAvailabilityLine($candidate, $sizeRecommendation);
+            if ($sizeAvailability !== null) {
+                $lines[] = '  '.$sizeAvailability;
+            }
         }
 
         $lines[] = 'Bạn có thể bấm trực tiếp vào đường dẫn ở từng sản phẩm.';
@@ -80,5 +120,25 @@ class ChatbotProductContextService
         $lines[] = 'Nếu bạn muốn, mình có thể lọc tiếp theo ngân sách hoặc phong cách cụ thể.';
 
         return implode("\n", $lines);
+    }
+
+    private function sizeAvailabilityLine(array $candidate, ?array $sizeRecommendation): ?string
+    {
+        $availableSizes = $candidate['available_sizes'] ?? [];
+        if ($availableSizes === []) {
+            return $sizeRecommendation !== null ? 'Mẫu này hiện chưa còn size để chọn.' : null;
+        }
+
+        $sizeList = implode(', ', $availableSizes);
+        if ($sizeRecommendation === null) {
+            return 'Size còn hàng: '.$sizeList.'.';
+        }
+
+        $recommendedSize = $sizeRecommendation['size'];
+        if (in_array($recommendedSize, $availableSizes, true)) {
+            return sprintf('Size còn hàng: %s. Size %s đang phù hợp theo số đo tham khảo của bạn.', $sizeList, $recommendedSize);
+        }
+
+        return sprintf('Size còn hàng: %s. Size %s theo số đo tham khảo hiện không có trên mẫu này; bạn nên đối chiếu bảng size trước khi chọn.', $sizeList, $recommendedSize);
     }
 }
