@@ -71,6 +71,11 @@
                 </p>
                 <a href="{{ route('products.index', array_filter(['new' => $onlyNew ? 1 : null, 'sort' => 'newest', 'q' => request('q')])) }}" class="text-xs font-semibold text-[color:var(--accent)] hover:underline">Mới thêm gần đây</a>
             </div>
+            @if($hasFuzzyResults)
+                <p class="mb-4 rounded-[var(--radius-ui)] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    Có một số kết quả gần với từ khóa bạn nhập. Hãy kiểm tra tên sản phẩm trước khi chọn.
+                </p>
+            @endif
             <div class="nd-product-grid">
                 @forelse($products as $p)
                     <x-product-card :product="$p" />

@@ -154,4 +154,110 @@ class ChatbotTest extends TestCase
         $this->assertStringContainsString('chiều cao', $reply);
         $this->assertStringContainsString('cân nặng', $reply);
     }
+
+    public function test_chat_limits_children_requests_to_children_categories(): void
+    {
+        \DB::table('categories')->insert([
+            ['id' => 1, 'name' => 'Trẻ em', 'slug' => 'tre-em', 'parent_id' => null, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'name' => 'Bé trai', 'slug' => 'be-trai', 'parent_id' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'name' => 'Thời trang nam', 'slug' => 'thoi-trang-nam', 'parent_id' => null, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        \DB::table('products')->insert([
+            [
+                'name' => 'Quần short kaki bé trai', 'slug' => 'quan-short-kaki-be-trai', 'description' => 'Quần trẻ em',
+                'price' => 199000, 'category_id' => 2, 'is_active' => true, 'is_featured' => false, 'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'name' => 'Quần kaki nam ống đứng', 'slug' => 'quan-kaki-nam-ong-dung', 'description' => 'Quần người lớn',
+                'price' => 399000, 'category_id' => 3, 'is_active' => true, 'is_featured' => true, 'created_at' => now(), 'updated_at' => now(),
+            ],
+        ]);
+
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
+            public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
+            {
+                return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
+            }
+        });
+
+        $response = $this->postJson(route('chat'), ['message' => 'Mình muốn mua quần cho trẻ em']);
+
+        $response->assertOk();
+        $reply = (string) $response->json('reply');
+
+        $this->assertStringContainsString('Quần short kaki bé trai', $reply);
+        $this->assertStringNotContainsString('Quần kaki nam ống đứng', $reply);
+    }
+
+    public function test_chat_suggests_products_when_the_product_name_contains_a_typo(): void
+    {
+        \DB::table('categories')->insert([
+            'name' => 'Bé trai',
+            'slug' => 'be-trai',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        \DB::table('products')->insert([
+            'name' => 'Áo hoodie nỉ bé trai',
+            'slug' => 'ao-hoodie-ni-be-trai',
+            'description' => 'Áo hoodie mềm ấm cho bé',
+            'price' => 259000,
+            'category_id' => 1,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
+            public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
+            {
+                return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
+            }
+        });
+
+        $response = $this->postJson(route('chat'), ['message' => 'Mình muốn mua áo hoodlly']);
+
+        $response->assertOk();
+        $this->assertStringContainsString('Áo hoodie nỉ bé trai', (string) $response->json('reply'));
+    }
+
+    public function test_chat_suggests_products_when_a_short_product_word_has_extra_letters(): void
+    {
+        \DB::table('categories')->insert([
+            'name' => 'Áo & áo thun',
+            'slug' => 'ao-ao-thun',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        \DB::table('products')->insert([
+            'name' => 'Áo thun cotton cơ bản',
+            'slug' => 'ao-thun-cotton-co-ban',
+            'description' => 'Áo thun mềm, dễ mặc',
+            'price' => 279000,
+            'category_id' => 1,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->app->instance(GeminiService::class, new class extends GeminiService
+        {
+            public function generateChatReply(string $userMessage, ?string $systemContext = null, array $productCandidates = []): string
+            {
+                return 'Sorry, the assistant is temporarily unavailable. Please try again later.';
+            }
+        });
+
+        $response = $this->postJson(route('chat'), ['message' => 'Tôi muốn mua áooo']);
+
+        $response->assertOk();
+        $this->assertStringContainsString('Áo thun cotton cơ bản', (string) $response->json('reply'));
+    }
 }

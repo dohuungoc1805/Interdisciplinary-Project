@@ -114,6 +114,10 @@ ul{list-style:none}
 
 /* User Menu */
 .user-menu-wrap { position: relative; }
+.guest-auth-links { display: flex; align-items: center; gap: .5rem; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.guest-auth-links a { color: var(--text); transition: color var(--transition); }
+.guest-auth-links a:hover { color: var(--accent); }
+.guest-auth-links span { color: var(--border); }
 .user-name-bubble { font-size: 0.7rem; margin-left: 5px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; display: none; }
 @media(min-width: 769px) { .user-name-bubble { display: inline-block; } }
 .user-dropdown { position: absolute; top: 100%; right: 0; width: 220px; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 15px; display: none; flex-direction: column; gap: 5px; z-index: 110; margin-top: 10px; border: 1px solid var(--border); }
@@ -449,4 +453,3 @@ ul{list-style:none}
 .checkout-form input, .checkout-form textarea { padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
 .checkout-form input:focus { border-color: var(--accent); outline: none; }
 .checkout-summary { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; font-size: 0.95rem; border: 1px dashed var(--border); }
-

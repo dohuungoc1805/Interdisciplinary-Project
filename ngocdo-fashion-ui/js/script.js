@@ -1,4 +1,4 @@
-// ===== Ngoc Đỗ Fashion - Standalone UI Script =====
+// ===== Qunec - Standalone UI Script =====
 
 // --- Cart State ---
 let cart = [];

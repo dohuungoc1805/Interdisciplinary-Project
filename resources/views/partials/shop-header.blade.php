@@ -69,12 +69,16 @@
             @auth
                 <details id="shop-account-details" class="relative z-[50]">
                     <summary
-                        class="nd-icon-btn flex cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"
+                        class="flex cursor-pointer list-none items-center gap-2 rounded-full border border-[color:var(--line-soft)] bg-white py-1 pl-1 pr-2.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[#f7f7f9] [&::-webkit-details-marker]:hidden"
                         title="Tài khoản"
                         aria-label="Menu tài khoản"
                         aria-haspopup="true"
                     >
-                        <i class="fas fa-user"></i>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color:var(--accent)] text-xs font-bold text-white">
+                            {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1, 'UTF-8'), 'UTF-8') }}
+                        </span>
+                        <span class="hidden max-w-[110px] truncate text-sm font-semibold text-[color:var(--text-main)] sm:block" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
+                        <i class="fas fa-chevron-down hidden text-[0.65rem] text-[color:var(--text-muted)] sm:block"></i>
                     </summary>
                     <div
                         class="absolute right-0 top-full z-[60] mt-2 min-w-[220px] rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] bg-white py-2 shadow-[var(--shadow-card-lg)]"
@@ -94,7 +98,12 @@
                     </div>
                 </details>
             @else
-                <a href="{{ route('login') }}" class="nd-icon-btn" title="Đăng nhập"><i class="fas fa-user"></i></a>
+                <div class="hidden items-center gap-2 text-sm font-semibold sm:flex" aria-label="Tài khoản chưa đăng nhập">
+                    <a href="{{ route('register') }}" class="text-[color:var(--text-main)] transition hover:text-[color:var(--accent)]">Đăng ký</a>
+                    <span class="text-[color:var(--line-soft)]" aria-hidden="true">|</span>
+                    <a href="{{ route('login') }}" class="text-[color:var(--accent)] transition hover:text-[color:var(--accent-hover)]">Đăng nhập</a>
+                </div>
+                <a href="{{ route('login') }}" class="nd-icon-btn sm:hidden" title="Đăng nhập" aria-label="Đăng nhập"><i class="fas fa-user"></i></a>
             @endauth
             <a href="{{ route('cart.index') }}" class="nd-icon-btn" title="Giỏ hàng">
                 <i class="fas fa-shopping-bag"></i>

@@ -7,37 +7,43 @@ use Illuminate\Support\Str;
 
 class ChatbotProductContextService
 {
+    public function __construct(private ProductSearchService $productSearchService) {}
+
     public function findCandidates(string $message, int $limit = 6): array
     {
-        $keywords = collect(preg_split('/\s+/u', Str::lower(trim($message))) ?: [])
-            ->map(fn (string $word) => trim($word))
-            ->filter(fn (string $word) => mb_strlen($word) >= 2)
-            ->unique()
-            ->values();
+        $keywords = $this->productKeywords($message);
+        $categoryTerms = $this->audienceCategoryTerms($message);
 
         $query = Product::query()
             ->with(['category:id,name', 'variants:id,product_id,size,stock'])
             ->where('is_active', true);
 
-        if ($keywords->isNotEmpty()) {
-            $query->where(function ($q) use ($keywords) {
-                foreach ($keywords as $keyword) {
-                    $q->orWhereRaw('LOWER(products.name) LIKE ?', ['%'.$keyword.'%'])
-                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->whereRaw('LOWER(name) LIKE ?', ['%'.$keyword.'%']);
-                        });
-                }
+        if ($categoryTerms !== []) {
+            $query->whereHas('category', function ($categoryQuery) use ($categoryTerms) {
+                $categoryQuery->where(function ($matchQuery) use ($categoryTerms) {
+                    foreach ($categoryTerms as $term) {
+                        $matchQuery->orWhereRaw('LOWER(name) LIKE ?', ['%'.$term.'%']);
+                    }
+                })->orWhereHas('parent', function ($parentQuery) use ($categoryTerms) {
+                    $parentQuery->where(function ($matchQuery) use ($categoryTerms) {
+                        foreach ($categoryTerms as $term) {
+                            $matchQuery->orWhereRaw('LOWER(name) LIKE ?', ['%'.$term.'%']);
+                        }
+                    });
+                });
             });
         }
 
-        $products = $query
+        $productsQuery = $query
             ->orderByDesc('is_featured')
             ->orderByDesc('is_new')
             ->orderByDesc('is_on_sale')
             ->orderByDesc('average_rating')
-            ->orderByDesc('review_count')
-            ->limit($limit)
-            ->get();
+            ->orderByDesc('review_count');
+
+        $products = $keywords->isNotEmpty()
+            ? $this->productSearchService->rank($productsQuery->get(), $keywords->implode(' '))->take($limit)
+            : $productsQuery->limit($limit)->get();
 
         return $products->map(function (Product $product) {
             $inStock = $product->variants->sum('stock') > 0;
@@ -65,6 +71,39 @@ class ChatbotProductContextService
                 'product_url' => route('products.show', $product->slug),
             ];
         })->all();
+    }
+
+    private function productKeywords(string $message): \Illuminate\Support\Collection
+    {
+        $ignoredWords = [
+            'mình', 'tôi', 'muốn', 'tìm', 'mua', 'cho', 'cần', 'gợi', 'ý', 'tư', 'vấn',
+            'xem', 'giúp', 'với', 'cái', 'loại', 'mẫu', 'đồ', 'được', 'không', 'nhé', 'ạ', 'ơi',
+            'trẻ', 'em', 'bé', 'trai', 'gái', 'nam', 'nữ', 'kids', 'kid', 'child', 'children',
+        ];
+
+        return collect(preg_split('/[^\p{L}\p{N}]+/u', Str::lower($message)) ?: [])
+            ->filter(fn (string $word) => mb_strlen($word) >= 2 && ! in_array($word, $ignoredWords, true))
+            ->unique()
+            ->values();
+    }
+
+    private function audienceCategoryTerms(string $message): array
+    {
+        $normalizedMessage = Str::lower($message);
+
+        if (preg_match('/trẻ\s*em|thiếu\s*nhi|\bbé\b|\bkids?\b|\bchild(?:ren)?\b/u', $normalizedMessage)) {
+            return ['trẻ em', 'bé trai', 'bé gái'];
+        }
+
+        if (preg_match('/\bnam\b|đàn\s*ông|\bmen\b/u', $normalizedMessage)) {
+            return ['thời trang nam', 'nam'];
+        }
+
+        if (preg_match('/\bnữ\b|phụ\s*nữ|\bwomen\b/u', $normalizedMessage)) {
+            return ['thời trang nữ', 'nữ'];
+        }
+
+        return [];
     }
 
     public function fallbackReply(
