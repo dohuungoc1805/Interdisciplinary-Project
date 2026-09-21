@@ -14,6 +14,8 @@ class Order extends Model
         'user_id',
         'status',
         'payment_method',
+        'payment_status',
+        'payment_confirmed_at',
         'subtotal',
         'discount_total',
         'shipping',
@@ -40,6 +42,7 @@ class Order extends Model
             'discount_total' => 'decimal:2',
             'shipping' => 'decimal:2',
             'total' => 'decimal:2',
+            'payment_confirmed_at' => 'datetime',
         ];
     }
 
@@ -61,5 +64,22 @@ class Order extends Model
     public function statusEnum(): ?OrderStatus
     {
         return OrderStatus::tryFrom($this->status);
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        return match ($this->payment_method) {
+            'bank_transfer' => 'Chuyển khoản ngân hàng',
+            default => 'Thanh toán khi nhận hàng (COD)',
+        };
+    }
+
+    public function paymentStatusLabel(): string
+    {
+        if ($this->payment_method === 'cod') {
+            return $this->payment_status === 'paid' ? 'Đã thanh toán' : 'Thanh toán khi nhận hàng';
+        }
+
+        return $this->payment_status === 'paid' ? 'Đã xác nhận thanh toán' : 'Chờ xác nhận thanh toán';
     }
 }

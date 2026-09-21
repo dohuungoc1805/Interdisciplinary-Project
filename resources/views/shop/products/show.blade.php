@@ -140,4 +140,23 @@
             </div>
         </div>
     </div>
+
+    @if($relatedProducts->isNotEmpty())
+        <section class="mt-14 border-t border-[color:var(--line-soft)] pt-10" aria-labelledby="related-products-title">
+            <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 id="related-products-title" class="shop-heading text-2xl font-bold text-[color:var(--primary)]">Khám phá thêm</h2>
+                    <p class="mt-1 text-sm text-[color:var(--text-muted)]">Các sản phẩm khác trong cùng nhóm dành cho bạn.</p>
+                </div>
+                @if($product->category)
+                    <a href="{{ route('products.index', ['category' => $product->category->id]) }}" class="text-sm font-semibold text-[color:var(--accent)] hover:underline">Xem tất cả</a>
+                @endif
+            </div>
+            <div class="nd-product-grid">
+                @foreach($relatedProducts as $relatedProduct)
+                    <x-product-card :product="$relatedProduct" />
+                @endforeach
+            </div>
+        </section>
+    @endif
 @endsection

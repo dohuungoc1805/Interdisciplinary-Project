@@ -95,10 +95,10 @@ ul{list-style:none}
 .header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
 
 .logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:42px;height:42px;background:var(--primary);color:var(--gold);display:flex;align-items:center;justify-content:center;border-radius:8px;font-weight:700;font-size:1rem;font-family:var(--font-heading)}
+.logo-icon{width:42px;height:42px;display:block;flex:0 0 42px;border-radius:12px;box-shadow:0 4px 10px rgba(66,24,47,.22)}
 .logo-text{display:flex;flex-direction:column;line-height:1.2}
-.logo-text strong{font-size:1.1rem;color:var(--primary);letter-spacing:2px}
-.logo-text small{font-size:.65rem;color:var(--text-light);letter-spacing:3px;text-transform:uppercase}
+.logo-text strong{font:500 1.25rem/1 "Bodoni MT",Didot,"Times New Roman",Georgia,serif;color:var(--primary);letter-spacing:2.5px;font-variant:small-caps;text-shadow:0 1px 0 rgba(255,255,255,.75)}
+.logo-text small{font:.6rem/1.2 Arial,Helvetica,sans-serif;color:var(--text-light);letter-spacing:3px;text-transform:uppercase;font-weight:600}
 
 .nav{display:flex;gap:1.8rem;align-items:center}
 .nav-link{font-size:.88rem;font-weight:500;color:var(--text);position:relative;transition:color var(--transition)}

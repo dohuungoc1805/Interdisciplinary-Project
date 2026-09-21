@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\ProductSearchService;
+use App\Services\RelatedProductService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +22,20 @@ class ProductController extends Controller
         $q = Product::query()->where('is_active', true)->with(['images', 'category', 'variants']);
 
         if ($request->filled('category')) {
-            $q->where('category_id', $request->integer('category'));
+            $selectedCategory = Category::query()
+                ->where('is_active', true)
+                ->find($request->integer('category'));
+            if ($selectedCategory) {
+                $categoryIds = [$selectedCategory->id];
+                if ($selectedCategory->parent_id === null) {
+                    $categoryIds = $selectedCategory->children()
+                        ->where('is_active', true)
+                        ->pluck('id')
+                        ->prepend($selectedCategory->id)
+                        ->all();
+                }
+                $q->whereIn('category_id', $categoryIds);
+            }
         }
         $searchTerm = trim((string) $request->query('q', ''));
         if ($request->filled('min')) {
@@ -28,6 +43,26 @@ class ProductController extends Controller
         }
         if ($request->filled('max')) {
             $q->where('price', '<=', (float) $request->get('max'));
+        }
+        $size = trim((string) $request->query('size', ''));
+        $color = trim((string) $request->query('color', ''));
+        $onlyInStock = $request->boolean('in_stock');
+        if ($size !== '' || $color !== '' || $onlyInStock) {
+            $q->whereHas('variants', function ($variantQuery) use ($size, $color, $onlyInStock) {
+                if ($size !== '') {
+                    $variantQuery->where('size', $size);
+                }
+                if ($color !== '') {
+                    $variantQuery->where('color', $color);
+                }
+                if ($onlyInStock) {
+                    $variantQuery->where('stock', '>', 0);
+                }
+            });
+        }
+        $onlyOnSale = $request->boolean('sale');
+        if ($onlyOnSale) {
+            $q->where('is_on_sale', true);
         }
         $onlyNew = $request->boolean('new');
         if ($onlyNew) {
@@ -56,12 +91,21 @@ class ProductController extends Controller
         } else {
             $products = $q->paginate(12)->withQueryString();
         }
-        $categories = Category::query()->where('is_active', true)->orderBy('name')->get();
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => fn ($childrenQuery) => $childrenQuery->where('is_active', true)->orderBy('position')->orderBy('name')])
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get();
+        $activeVariants = ProductVariant::query()->whereHas('product', fn ($productQuery) => $productQuery->where('is_active', true));
+        $sizes = (clone $activeVariants)->where('size', '!=', '')->distinct()->orderBy('size')->pluck('size');
+        $colors = (clone $activeVariants)->where('color', '!=', '')->distinct()->orderBy('color')->pluck('color');
 
-        return view('shop.products.index', compact('products', 'categories', 'onlyNew', 'hasFuzzyResults'));
+        return view('shop.products.index', compact('products', 'categories', 'sizes', 'colors', 'onlyNew', 'hasFuzzyResults'));
     }
 
-    public function show(string $slug): View
+    public function show(string $slug, RelatedProductService $relatedProductService): View
     {
         $product = Product::query()->where('slug', $slug)->where('is_active', true)
             ->with(['images', 'category', 'variants' => function ($q) {
@@ -83,7 +127,8 @@ class ProductController extends Controller
                     ->get(['id', 'order_number', 'created_at']);
             }
         }
+        $relatedProducts = $relatedProductService->for($product);
 
-        return view('shop.products.show', compact('product', 'reviews', 'userReview', 'reviewableOrders'));
+        return view('shop.products.show', compact('product', 'reviews', 'userReview', 'reviewableOrders', 'relatedProducts'));
     }
 }

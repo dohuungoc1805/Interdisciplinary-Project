@@ -10,6 +10,19 @@
 
         <div class="admin-card space-y-4">
             <h2 class="text-sm font-bold text-slate-800">Cập nhật đơn</h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 text-sm">
+                <div>
+                    <p class="font-semibold text-slate-800">{{ $order->paymentMethodLabel() }}</p>
+                    <p class="mt-1 text-slate-500">{{ $order->paymentStatusLabel() }}</p>
+                </div>
+                @if($order->payment_method === 'bank_transfer' && $order->payment_status !== 'paid')
+                    <form method="post" action="{{ route('admin.orders.confirm-bank-transfer', $order) }}">@csrf
+                        <button class="admin-btn" type="submit" onclick="return confirm('Xác nhận đã nhận đúng số tiền chuyển khoản cho đơn này?')">Xác nhận đã nhận tiền</button>
+                    </form>
+                @elseif($order->payment_confirmed_at)
+                    <span class="text-xs font-medium text-emerald-700">Đã xác nhận: {{ $order->payment_confirmed_at->format('d/m/Y H:i') }}</span>
+                @endif
+            </div>
             <form method="post" action="{{ route('admin.orders.update', $order) }}" class="space-y-4">@csrf @method('PATCH')
                 <div>
                     <label class="admin-label" for="status">Trạng thái</label>

@@ -35,6 +35,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+    Route::post('/orders/{order}/confirm-bank-transfer', [OrderController::class, 'confirmBankTransfer'])->name('orders.confirm-bank-transfer');
     Route::post('/orders/bulk-status', [OrderController::class, 'bulkStatus'])->name('orders.bulk');
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

@@ -38,6 +38,27 @@
                 <input name="country" class="field-control uppercase" placeholder="Quốc gia (mã ISO)" value="{{ old('country', 'VN') }}" />
             </div>
             <textarea name="customer_note" class="field-control" rows="2" placeholder="Ghi chú giao hàng (tuỳ chọn)">{{ old('customer_note') }}</textarea>
+            <fieldset class="border-t border-[color:var(--line-soft)] pt-5">
+                <legend class="text-sm font-semibold text-[color:var(--primary)]">Phương thức thanh toán</legend>
+                <div class="mt-3 space-y-3">
+                    <label class="flex cursor-pointer items-start gap-3 border border-[color:var(--line-soft)] p-4">
+                        <input type="radio" name="payment_method" value="cod" class="mt-1" @checked(old('payment_method', 'cod') === 'cod')>
+                        <span>
+                            <span class="block text-sm font-semibold text-[color:var(--primary)]">Thanh toán khi nhận hàng (COD)</span>
+                            <span class="mt-1 block text-xs text-[color:var(--text-muted)]">Thanh toán cho đơn vị giao hàng khi nhận được sản phẩm.</span>
+                        </span>
+                    </label>
+                    @if($bankTransferAvailable)
+                        <label class="flex cursor-pointer items-start gap-3 border border-[color:var(--line-soft)] p-4">
+                            <input type="radio" name="payment_method" value="bank_transfer" class="mt-1" @checked(old('payment_method') === 'bank_transfer')>
+                            <span>
+                                <span class="block text-sm font-semibold text-[color:var(--primary)]">Chuyển khoản ngân hàng qua QR</span>
+                                <span class="mt-1 block text-xs text-[color:var(--text-muted)]">Mã QR đúng số tiền sẽ hiện sau khi đặt đơn. Cửa hàng xác nhận thanh toán thủ công.</span>
+                            </span>
+                        </label>
+                    @endif
+                </div>
+            </fieldset>
         </div>
         <div class="shop-shell p-5 sm:p-6">
             <h2 class="mb-4 text-lg font-semibold text-[color:var(--primary)]">Tóm tắt</h2>
@@ -49,6 +70,11 @@
                 <p class="pt-2 text-xs text-[color:var(--text-muted)]">Hình thức: thanh toán khi nhận hàng (COD).</p>
             </div>
             <button class="primary-cta mt-6 w-full justify-center" type="submit">Đặt hàng</button>
+            @if($totals['is_free_shipping'])
+                <p class="mt-4 text-sm font-semibold text-emerald-700">Đơn hàng này được miễn phí vận chuyển.</p>
+            @elseif($totals['free_shipping_threshold'] > 0)
+                <p class="mt-4 text-xs text-[color:var(--text-muted)]">Mua thêm {{ number_format($totals['remaining_for_free_shipping'], 0, ',', '.') }} ₫ để được miễn phí vận chuyển.</p>
+            @endif
         </div>
     </form>
 @endsection

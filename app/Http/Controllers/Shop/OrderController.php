@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Services\BankTransferPaymentService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -14,19 +17,30 @@ class OrderController extends Controller
         private OrderService $orderService,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $orders = auth()->user()->orders()->withCount('items')->latest()->paginate(10);
+        $status = $request->string('status')->toString();
+        $validStatuses = array_column(OrderStatus::cases(), 'value');
+        $ordersQuery = auth()->user()->orders()->withCount('items')->latest();
 
-        return view('shop.orders.index', compact('orders'));
+        if (in_array($status, $validStatuses, true)) {
+            $ordersQuery->where('status', $status);
+        }
+
+        $orders = $ordersQuery->paginate(10)->withQueryString();
+
+        return view('shop.orders.index', compact('orders', 'status', 'validStatuses'));
     }
 
-    public function show(Order $order): View
+    public function show(Order $order, BankTransferPaymentService $bankTransferPaymentService): View
     {
         $this->authorizeOrder($order);
         $order->load('items');
+        $bankTransferDetails = $order->payment_method === 'bank_transfer'
+            ? $bankTransferPaymentService->detailsFor($order)
+            : null;
 
-        return view('shop.orders.show', compact('order'));
+        return view('shop.orders.show', compact('order', 'bankTransferDetails'));
     }
 
     public function cancel(Order $order): RedirectResponse

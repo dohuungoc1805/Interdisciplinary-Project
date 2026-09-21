@@ -10,7 +10,7 @@ use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,6 +27,7 @@ class OrderService
         ?int $addressId = null,
         ?array $manualAddress = null,
         ?string $customerNote = null,
+        string $paymentMethod = 'cod',
     ): Order {
         $totals = $this->cartService->getTotals($cart);
         $cart->load('items.variant.product');
@@ -34,7 +35,7 @@ class OrderService
             throw new \InvalidArgumentException('Cart is empty.');
         }
 
-        return DB::transaction(function () use ($user, $cart, $totals, $addressId, $manualAddress, $customerNote) {
+        return DB::transaction(function () use ($user, $cart, $totals, $addressId, $manualAddress, $customerNote, $paymentMethod) {
             if ($totals['discount'] > 0 && $totals['coupon']) {
                 $c = $totals['coupon'];
                 $c->increment('used_count');
@@ -52,7 +53,8 @@ class OrderService
                 'order_number' => $this->generateOrderNumber(),
                 'user_id' => $user->id,
                 'status' => OrderStatus::Pending->value,
-                'payment_method' => 'cod',
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'pending',
                 'subtotal' => $totals['subtotal'],
                 'discount_total' => $totals['discount'],
                 'shipping' => $totals['shipping'],
@@ -71,9 +73,12 @@ class OrderService
             ]);
 
             foreach ($cart->items as $line) {
-                $v = $line->variant;
-                if (! $v) {
-                    continue;
+                $v = ProductVariant::query()
+                    ->with('product')
+                    ->lockForUpdate()
+                    ->find($line->product_variant_id);
+                if (! $v || ! $v->product) {
+                    throw new \RuntimeException('A product in your cart is no longer available.');
                 }
                 if ($v->stock < $line->quantity) {
                     throw new \RuntimeException('Insufficient stock for '.$v->product->name);
@@ -121,8 +126,38 @@ class OrderService
         }
     }
 
+    public function confirmBankTransferPayment(Order $order): void
+    {
+        $result = DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if ($lockedOrder->payment_method !== 'bank_transfer') {
+                throw new \RuntimeException('Only bank transfer payments can be confirmed here.');
+            }
+            if ($lockedOrder->payment_status === 'paid') {
+                return [$lockedOrder, null];
+            }
+
+            $previousStatus = $lockedOrder->status;
+            $lockedOrder->payment_status = 'paid';
+            $lockedOrder->payment_confirmed_at = now();
+            if ($lockedOrder->status === OrderStatus::Pending->value) {
+                $lockedOrder->status = OrderStatus::Processing->value;
+            }
+            $lockedOrder->save();
+
+            return [$lockedOrder->fresh(), $lockedOrder->status !== $previousStatus ? $previousStatus : null];
+        });
+
+        if ($result[1] !== null) {
+            event(new OrderStatusChanged($result[0], $result[1]));
+        }
+    }
+
     public function cancelByUser(Order $order): void
     {
+        if ($order->payment_method === 'bank_transfer' && $order->payment_status === 'paid') {
+            throw new \RuntimeException('A paid bank transfer order cannot be cancelled online. Please contact the store for support.');
+        }
         if (! in_array($order->status, [OrderStatus::Pending->value, OrderStatus::Processing->value], true)) {
             throw new \RuntimeException('Order cannot be cancelled.');
         }

@@ -60,6 +60,17 @@ class OrderController extends Controller
         return back()->with('status', 'Đã cập nhật đơn hàng.');
     }
 
+    public function confirmBankTransfer(Order $order): RedirectResponse
+    {
+        try {
+            $this->orderService->confirmBankTransferPayment($order);
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', 'Đã xác nhận thanh toán chuyển khoản. Đơn hàng đang được chuẩn bị.');
+    }
+
     public function bulkStatus(Request $request): RedirectResponse
     {
         $data = $request->validate([

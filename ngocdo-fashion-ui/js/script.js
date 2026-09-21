@@ -1,4 +1,4 @@
-// ===== Qunec - Standalone UI Script =====
+// ===== QUDENA - Standalone UI Script =====
 
 // --- Cart State ---
 let cart = [];

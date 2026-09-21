@@ -227,9 +227,11 @@
     }
 
     .nd-logo-mark {
-        @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold leading-none tracking-tight text-white shadow-md ring-1 ring-black/5 transition duration-300 sm:h-11 sm:w-11 sm:text-xs;
-        font-family: var(--font-body);
-        background: linear-gradient(145deg, #e94560 0%, #d63851 45%, #1a1a2e 100%);
+        @apply block h-10 w-10 shrink-0 overflow-hidden rounded-[1.15rem] shadow-md ring-1 ring-black/5 transition duration-300 sm:h-11 sm:w-11;
+    }
+
+    .nd-logo-mark img {
+        @apply block h-full w-full;
     }
 
     .nd-brand-logo:hover .nd-logo-mark {
@@ -242,34 +244,27 @@
     }
 
     .nd-logo-line1 {
-        @apply text-[0.9375rem] font-semibold tracking-tight text-[color:var(--primary)] sm:text-base;
+        @apply relative text-[1.05rem] font-medium tracking-[0.12em] text-[color:var(--primary)] sm:text-[1.2rem];
+        font-family: "Bodoni MT", Didot, "Times New Roman", Georgia, serif;
+        font-variant: small-caps;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
     }
 
     .nd-logo-line2 {
-        @apply mt-0.5 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-[color:var(--text-muted)];
-    }
-
-    .nd-logo-line2--brand {
-        @apply bg-gradient-to-r from-[color:var(--accent)] to-[#ff7a8a] bg-clip-text font-semibold text-transparent;
-        -webkit-background-clip: text;
+        @apply mt-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)];
+        font-family: Arial, Helvetica, sans-serif;
     }
 
     .nd-brand-logo--footer .nd-logo-mark {
-        @apply ring-white/10;
-        background: linear-gradient(145deg, #e94560 0%, #ff7a8a 50%, #1a1a2e 100%);
+        @apply ring-white/20;
     }
 
     .nd-brand-logo--footer .nd-logo-line1 {
         @apply text-white;
     }
 
-    .nd-brand-logo--footer .nd-logo-line2:not(.nd-logo-line2--brand) {
+    .nd-brand-logo--footer .nd-logo-line2 {
         @apply text-white/65;
-    }
-
-    .nd-brand-logo--footer .nd-logo-line2--brand {
-        @apply bg-gradient-to-r from-[color:var(--gold)] to-amber-200 bg-clip-text font-semibold text-transparent;
-        -webkit-background-clip: text;
     }
 
     .nd-nav-link {

@@ -9,6 +9,16 @@
     </div>
 
     <div class="mx-auto max-w-3xl space-y-4">
+        <form method="get" class="flex flex-wrap items-center gap-2" aria-label="Lọc đơn mua">
+            <label for="order-status" class="text-sm font-medium text-[color:var(--primary)]">Trạng thái</label>
+            <select id="order-status" name="status" class="field-control w-auto min-w-44" onchange="this.form.submit()">
+                <option value="">Tất cả đơn hàng</option>
+                @foreach(\App\Enums\OrderStatus::cases() as $orderStatus)
+                    <option value="{{ $orderStatus->value }}" @selected($status === $orderStatus->value)>{{ $orderStatus->label() }}</option>
+                @endforeach
+            </select>
+        </form>
+
         @forelse($orders as $o)
             <a href="{{ route('orders.show', $o) }}" class="shop-shell flex flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-lg)] sm:flex-row sm:items-center sm:justify-between">
                 <div>

@@ -43,6 +43,11 @@
             <p class="flex justify-between"><span>Phí vận chuyển</span><strong>{{ number_format($totals['shipping'], 0, ',', '.') }} ₫</strong></p>
             <p class="flex justify-between border-t border-[color:var(--line-soft)] pt-3 text-lg font-bold text-[color:var(--primary)]"><span>Tổng cộng</span><span>{{ number_format($totals['total'], 0, ',', '.') }} ₫</span></p>
         </div>
+        @if($totals['is_free_shipping'])
+            <p class="mt-4 text-right text-sm font-semibold text-emerald-700">Đơn hàng của bạn được miễn phí vận chuyển.</p>
+        @elseif($totals['free_shipping_threshold'] > 0)
+            <p class="mt-4 text-right text-sm text-[color:var(--text-muted)]">Mua thêm {{ number_format($totals['remaining_for_free_shipping'], 0, ',', '.') }} ₫ để được miễn phí vận chuyển.</p>
+        @endif
         <div class="mt-8 flex justify-end">
             @auth
                 <a href="{{ route('checkout.create') }}" class="primary-cta">Thanh toán</a>

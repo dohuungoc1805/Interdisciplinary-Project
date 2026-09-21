@@ -24,7 +24,7 @@ class ProductController extends Controller
 {
     public function index(Request $request): View
     {
-        $q = Product::query()->with('category');
+        $q = Product::query()->with('category')->withSum('variants as stock_total', 'stock');
         if ($request->filled('q')) {
             $term = trim((string) $request->query('q', ''));
             if ($term !== '') {
@@ -35,9 +35,28 @@ class ProductController extends Controller
                 });
             }
         }
+        $categoryId = $request->integer('category');
+        if ($categoryId > 0) {
+            $q->where('category_id', $categoryId);
+        }
+        if ($request->filled('availability')) {
+            match ($request->string('availability')->toString()) {
+                'in_stock' => $q->whereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0)),
+                'out_of_stock' => $q->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0)),
+                'low_stock' => $q->whereHas('variants', fn ($variantQuery) => $variantQuery->whereBetween('stock', [1, (int) config('shop.low_stock_threshold')])),
+                default => null,
+            };
+        }
+        if ($request->filled('visibility')) {
+            $q->where('is_active', $request->string('visibility')->toString() === 'active');
+        }
+        if ($request->boolean('sale')) {
+            $q->where('is_on_sale', true);
+        }
         $products = $q->latest()->paginate(20)->withQueryString();
+        $categories = Category::query()->orderBy('position')->orderBy('name')->get();
 
-        return view('admin.products.index', compact('products'));
+        return view('admin.products.index', compact('products', 'categories'));
     }
 
     public function quickSearch(Request $request): JsonResponse

@@ -93,7 +93,7 @@ class CartService
     }
 
     /**
-     * @return array{subtotal: float, discount: float, shipping: float, total: float, coupon: ?Coupon}
+     * @return array{subtotal: float, discount: float, shipping: float, total: float, coupon: ?Coupon, is_free_shipping: bool, free_shipping_threshold: float, remaining_for_free_shipping: float}
      */
     public function getTotals(Cart $cart): array
     {
@@ -107,7 +107,6 @@ class CartService
             $unit = (float) $v->unitPriceCents();
             $subtotal += $unit * (int) $line->quantity;
         }
-        $shipping = (float) config('shop.default_shipping');
         $discount = 0.0;
         $coupon = null;
         if ($cart->applied_coupon_code) {
@@ -118,6 +117,9 @@ class CartService
                 $discount = 0.0;
             }
         }
+        $freeShippingThreshold = (float) config('shop.free_shipping_threshold');
+        $isFreeShipping = $freeShippingThreshold > 0 && $subtotal >= $freeShippingThreshold;
+        $shipping = $isFreeShipping ? 0.0 : (float) config('shop.default_shipping');
         $total = max(0, $subtotal - $discount) + $shipping;
 
         return [
@@ -126,6 +128,9 @@ class CartService
             'shipping' => $shipping,
             'total' => $total,
             'coupon' => $discount > 0 ? $coupon : null,
+            'is_free_shipping' => $isFreeShipping,
+            'free_shipping_threshold' => $freeShippingThreshold,
+            'remaining_for_free_shipping' => max(0, $freeShippingThreshold - $subtotal),
         ];
     }
 }

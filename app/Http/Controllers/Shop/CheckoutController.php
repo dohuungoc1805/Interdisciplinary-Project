@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Services\CartService;
+use App\Services\BankTransferPaymentService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class CheckoutController extends Controller
     public function __construct(
         private CartService $cartService,
         private OrderService $orderService,
+        private BankTransferPaymentService $bankTransferPaymentService,
     ) {}
 
     public function create(): View|RedirectResponse
@@ -25,7 +27,9 @@ class CheckoutController extends Controller
         $totals = $this->cartService->getTotals($cart);
         $addresses = auth()->user()->addresses()->orderByDesc('is_default')->get();
 
-        return view('shop.checkout', compact('cart', 'totals', 'addresses'));
+        $bankTransferAvailable = $this->bankTransferPaymentService->isConfigured();
+
+        return view('shop.checkout', compact('cart', 'totals', 'addresses', 'bankTransferAvailable'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -45,8 +49,12 @@ class CheckoutController extends Controller
             'postal_code' => 'required_without:address_id|nullable|string|max:32',
             'country' => 'nullable|string|size:2',
             'customer_note' => 'nullable|string|max:1000',
+            'payment_method' => 'required|in:cod,bank_transfer',
         ];
         $data = $request->validate($rules);
+        if ($data['payment_method'] === 'bank_transfer' && ! $this->bankTransferPaymentService->isConfigured()) {
+            return back()->with('error', 'Bank transfer is not available yet.')->withInput();
+        }
         if (! empty($data['address_id'])) {
             if (! $user->addresses()->whereKey($data['address_id'])->exists()) {
                 return back()->with('error', 'Invalid address.')->withInput();
@@ -75,7 +83,8 @@ class CheckoutController extends Controller
                     'postal_code' => $data['postal_code'],
                     'country' => $data['country'] ?? 'VN',
                 ] : null,
-                $data['customer_note'] ?? null
+                $data['customer_note'] ?? null,
+                $data['payment_method'],
             );
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage())->withInput();
