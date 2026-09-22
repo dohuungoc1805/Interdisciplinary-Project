@@ -1,26 +1,30 @@
 @extends('layouts.admin')
 @section('title', 'Thêm sản phẩm')
 @section('content')
+    @php
+        $variantRows = old('variants', [['size' => '', 'color' => '', 'stock' => 0, 'price' => '', 'sku' => '']]);
+    @endphp
     <div class="admin-shell max-w-2xl">
         <div class="admin-page-head">
             <div>
                 <h1 class="admin-page-title">Thêm sản phẩm</h1>
-                <p class="admin-page-lead">Thông tin cơ bản, ảnh và biến thể (ít nhất một dòng).</p>
+                <p class="admin-page-lead">Thông tin sản phẩm, hình ảnh, size, màu sắc và tồn kho.</p>
             </div>
-            <a href="{{ route('admin.products.index') }}" class="admin-btn-outline shrink-0">← Danh sách</a>
+            <a href="{{ route('admin.products.index') }}" class="admin-btn-outline shrink-0">&larr; Danh sách</a>
         </div>
         <div class="admin-card space-y-5">
-            <form method="post" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" class="space-y-5 text-sm">@csrf
+            <form method="post" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" class="space-y-5 text-sm">
+                @csrf
                 <div>
                     <label class="admin-label" for="category_id">Danh mục</label>
                     <select id="category_id" name="category_id" class="admin-input" required>
-                        @foreach($categories as $c)
-                            <option value="{{ $c->id }}" @selected((string) old('category_id', $categories->first()?->id) === (string) $c->id)>{{ $c->name }}</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}" @selected((string) old('category_id', $categories->first()?->id) === (string) $category->id)>{{ $category->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label class="admin-label" for="name">Tên</label>
+                    <label class="admin-label" for="name">Tên sản phẩm</label>
                     <input id="name" name="name" class="admin-input" required value="{{ old('name') }}" />
                 </div>
                 <div>
@@ -29,16 +33,16 @@
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="admin-label" for="price">Giá (₫)</label>
-                        <input id="price" name="price" type="number" step="0.01" class="admin-input" required value="{{ old('price') }}" />
+                        <label class="admin-label" for="price">Giá (đ)</label>
+                        <input id="price" name="price" type="number" min="0" step="0.01" class="admin-input" required value="{{ old('price') }}" />
                     </div>
                     <div>
                         <label class="admin-label" for="compare_price">Giá gốc / so sánh</label>
-                        <input id="compare_price" name="compare_price" type="number" step="0.01" class="admin-input" value="{{ old('compare_price') }}" />
+                        <input id="compare_price" name="compare_price" type="number" min="0" step="0.01" class="admin-input" value="{{ old('compare_price') }}" />
                     </div>
                 </div>
                 <div>
-                    <label class="admin-label" for="sku">SKU</label>
+                    <label class="admin-label" for="sku">SKU sản phẩm</label>
                     <input id="sku" name="sku" class="admin-input font-mono text-xs" value="{{ old('sku') }}" />
                 </div>
                 <div>
@@ -59,20 +63,7 @@
                         <input type="checkbox" name="is_active" value="1" class="rounded border-slate-300 text-orange-600" @checked(! $errors->any() ? true : request()->boolean('is_active')) /> Đang bán
                     </label>
                 </div>
-                <div class="border-t border-slate-100 pt-5">
-                    <h2 class="mb-3 text-sm font-semibold text-slate-900">Biến thể (ít nhất 1 dòng đầy đủ)</h2>
-                    @for($i = 0; $i < 3; $i++)
-                        <div class="mb-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3 last:mb-0">
-                            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                <input name="variants[{{ $i }}][size]" placeholder="Size" class="admin-input" value="{{ old("variants.$i.size") }}" />
-                                <input name="variants[{{ $i }}][color]" placeholder="Màu" class="admin-input" value="{{ old("variants.$i.color") }}" />
-                                <input name="variants[{{ $i }}][stock]" type="number" min="0" max="1000" placeholder="Tồn kho" class="admin-input" value="{{ old("variants.$i.stock", 0) }}" />
-                                <input name="variants[{{ $i }}][price]" type="number" step="0.01" placeholder="Giá riêng (tùy chọn)" class="admin-input" value="{{ old("variants.$i.price") }}" />
-                            </div>
-                        </div>
-                    @endfor
-                    <p class="text-xs text-slate-500">Dòng không dùng để trống size/màu. Các dòng có dữ liệu nên liên tiếp từ trên xuống.</p>
-                </div>
+                <x-admin.product-variant-editor :variants="$variantRows" />
                 <button class="admin-btn" type="submit">Tạo sản phẩm</button>
             </form>
         </div>

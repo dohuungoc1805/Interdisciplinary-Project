@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -263,6 +264,14 @@ class ProductController extends Controller
         $data['is_on_sale'] = $request->boolean('is_on_sale');
         $data['is_new'] = $request->boolean('is_new');
         $data['is_active'] = $request->boolean('is_active');
+
+        $variantKeys = collect($data['variants'])
+            ->map(fn (array $variant) => Str::lower(trim($variant['size'])).'|'.Str::lower(trim($variant['color'])));
+        if ($variantKeys->count() !== $variantKeys->unique()->count()) {
+            throw ValidationException::withMessages([
+                'variants' => 'Mỗi tổ hợp size và màu chỉ được khai báo một lần.',
+            ]);
+        }
 
         return $data;
     }
