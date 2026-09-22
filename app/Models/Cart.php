@@ -12,6 +12,7 @@ class Cart extends Model
         'user_id',
         'session_id',
         'applied_coupon_code',
+        'applied_shipping_coupon_code',
     ];
 
     public function user(): BelongsTo

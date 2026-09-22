@@ -40,6 +40,9 @@ class OrderService
                 $c = $totals['coupon'];
                 $c->increment('used_count');
             }
+            if ($totals['shipping_discount'] > 0 && $totals['shipping_coupon']) {
+                $totals['shipping_coupon']->increment('used_count');
+            }
             if ($addressId) {
                 $addr = Address::query()->where('user_id', $user->id)->whereKey($addressId)->firstOrFail();
                 $ship = $this->snapshotFromAddress($addr);
@@ -57,10 +60,13 @@ class OrderService
                 'payment_status' => 'pending',
                 'subtotal' => $totals['subtotal'],
                 'discount_total' => $totals['discount'],
+                'shipping_discount_total' => $totals['shipping_discount'],
                 'shipping' => $totals['shipping'],
                 'total' => $totals['total'],
                 'coupon_id' => $totals['coupon']?->id,
                 'coupon_code' => $totals['coupon']?->code,
+                'shipping_coupon_id' => $totals['shipping_coupon']?->id,
+                'shipping_coupon_code' => $totals['shipping_coupon']?->code,
                 'recipient_name' => $ship['recipient_name'],
                 'phone' => $ship['phone'],
                 'line1' => $ship['line1'],
@@ -101,7 +107,7 @@ class OrderService
                 $v->decrement('stock', (int) $line->quantity);
             }
             $cart->items()->delete();
-            $cart->update(['applied_coupon_code' => null]);
+            $cart->update(['applied_coupon_code' => null, 'applied_shipping_coupon_code' => null]);
             $placed = $order->fresh(['user', 'items']);
             event(new OrderPlaced($placed));
 
@@ -179,6 +185,12 @@ class OrderService
             }
             if ($order->coupon_id) {
                 $c = Coupon::query()->find($order->coupon_id);
+                if ($c && $c->used_count > 0) {
+                    $c->decrement('used_count');
+                }
+            }
+            if ($order->shipping_coupon_id) {
+                $c = Coupon::query()->find($order->shipping_coupon_id);
                 if ($c && $c->used_count > 0) {
                     $c->decrement('used_count');
                 }

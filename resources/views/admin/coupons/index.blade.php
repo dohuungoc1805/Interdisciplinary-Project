@@ -14,6 +14,7 @@
             <table class="admin-table">
                 <thead>
                     <tr>
+                        <th>Nhóm voucher</th>
                         <th>Mã</th>
                         <th>Loại</th>
                         <th>Giá trị</th>
@@ -25,6 +26,7 @@
                 <tbody>
                     @foreach($coupons as $c)
                         <tr>
+                            <td>{{ $c->kindLabel() }}</td>
                             <td class="font-mono text-xs font-semibold">{{ $c->code }}</td>
                             <td>{{ $c->type }}</td>
                             <td>{{ $c->value }}</td>

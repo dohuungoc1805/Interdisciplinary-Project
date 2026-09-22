@@ -2,27 +2,29 @@
 
 namespace App\Http\Controllers\Shop;
 
+use App\Enums\CouponKind;
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\ProductVariant;
 use App\Services\CartService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    public function __construct(
-        private CartService $cartService,
-    ) {}
+    public function __construct(private CartService $cartService) {}
 
     public function index(): View
     {
         $cart = $this->cartService->currentCart()->load(['items.variant.product.images']);
         $totals = $this->cartService->getTotals($cart);
+        $publicCoupons = Coupon::query()->where('is_active', true)->orderBy('kind')->orderBy('code')->get();
 
-        return view('shop.cart', compact('cart', 'totals'));
+        return view('shop.cart', compact('cart', 'totals', 'publicCoupons'));
     }
 
     public function add(Request $request): RedirectResponse
@@ -65,7 +67,7 @@ class CartController extends Controller
         return back()->with('status', 'Cart updated.');
     }
 
-    public function applyCoupon(Request $request): RedirectResponse
+    public function applyCoupon(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate(['code' => 'required|string|max:32']);
         $code = strtoupper(trim($data['code']));
@@ -73,24 +75,65 @@ class CartController extends Controller
         $cart = $this->cartService->currentCart();
         $totals = $this->cartService->getTotals($cart);
         if (! $coupon) {
-            return back()->with('error', 'Mã giảm giá không tồn tại.');
+            return $this->couponError($request, 'Mã giảm giá không tồn tại.');
         }
         if ($message = $coupon->validationErrorForAmount($totals['subtotal'])) {
-            return back()->with('error', $message);
+            return $this->couponError($request, $message);
         }
-        if ($coupon->discountForSubtotal($totals['subtotal']) <= 0) {
-            return back()->with('error', 'Mã giảm giá này chưa có giá trị giảm hợp lệ.');
+        $discount = $coupon->isShipping()
+            ? $coupon->discountForAmount($totals['base_shipping'])
+            : $coupon->discountForSubtotal($totals['subtotal']);
+        if ($discount <= 0) {
+            return $this->couponError($request, 'Mã giảm giá này chưa có giá trị giảm hợp lệ.');
         }
-        $cart->update(['applied_coupon_code' => $code]);
+        $cart->update($coupon->isShipping()
+            ? ['applied_shipping_coupon_code' => $code]
+            : ['applied_coupon_code' => $code]);
+
+        if ($request->expectsJson()) {
+            return response()->json($this->couponPayload($cart));
+        }
 
         return back()->with('status', 'Đã áp dụng mã giảm giá.');
     }
 
-    public function removeCoupon(): RedirectResponse
+    public function removeCoupon(Request $request): RedirectResponse|JsonResponse
     {
         $cart = $this->cartService->currentCart();
-        $cart->update(['applied_coupon_code' => null]);
+        $kind = $request->string('kind')->toString();
+        $cart->update($kind === CouponKind::Shipping->value
+            ? ['applied_shipping_coupon_code' => null]
+            : ['applied_coupon_code' => null]);
+
+        if ($request->expectsJson()) {
+            return response()->json($this->couponPayload($cart));
+        }
 
         return back()->with('status', 'Đã bỏ mã giảm giá.');
+    }
+
+    private function couponError(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        return back()->with('error', $message);
+    }
+
+    private function couponPayload(Cart $cart): array
+    {
+        $totals = $this->cartService->getTotals($cart);
+
+        return [
+            'message' => 'Cập nhật voucher thành công.',
+            'product_code' => $cart->applied_coupon_code,
+            'shipping_code' => $cart->applied_shipping_coupon_code,
+            'subtotal' => $totals['subtotal'],
+            'discount' => $totals['discount'],
+            'shipping_discount' => $totals['shipping_discount'],
+            'shipping' => $totals['shipping'],
+            'total' => $totals['total'],
+        ];
     }
 }

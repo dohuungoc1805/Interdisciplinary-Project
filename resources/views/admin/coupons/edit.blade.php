@@ -15,6 +15,13 @@
                     <input id="code" class="admin-input font-mono" name="code" value="{{ old('code', $coupon->code) }}" required />
                 </div>
                 <div>
+                    <label class="admin-label" for="kind">Loại voucher</label>
+                    <select id="kind" name="kind" class="admin-input" required>
+                        <option value="product" @selected(old('kind', $coupon->kind ?? 'product') === 'product')>Giảm giá sản phẩm</option>
+                        <option value="shipping" @selected(old('kind', $coupon->kind ?? 'product') === 'shipping')>Giảm giá vận chuyển</option>
+                    </select>
+                </div>
+                <div>
                     <label class="admin-label" for="type">Loại</label>
                     <select id="type" name="type" class="admin-input">@foreach(\App\Enums\CouponType::cases() as $t)<option value="{{ $t->value }}" @selected(old('type', $coupon->type) === $t->value)>{{ $t === \App\Enums\CouponType::Percent ? 'Giảm theo %' : 'Giảm số tiền cố định' }}</option>@endforeach</select>
                 </div>

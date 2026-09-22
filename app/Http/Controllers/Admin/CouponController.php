@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\CouponType;
+use App\Enums\CouponKind;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use Illuminate\Http\RedirectResponse;
@@ -59,6 +60,7 @@ class CouponController extends Controller
     {
         $rules = [
             'code' => 'required|string|max:32|unique:coupons,code',
+            'kind' => 'required|in:'.implode(',', array_column(CouponKind::cases(), 'value')),
             'type' => 'required|in:'.implode(',', array_column(CouponType::cases(), 'value')),
             'value' => 'required|numeric|min:0',
             'min_order_amount' => 'nullable|numeric|min:0',
@@ -70,6 +72,7 @@ class CouponController extends Controller
         ];
         if ($isUpdate && $coupon) {
             $rules['code'] = 'sometimes|required|string|max:32|unique:coupons,code,'.$coupon->id;
+            $rules['kind'] = 'sometimes|required|in:'.implode(',', array_column(CouponKind::cases(), 'value'));
         }
         $data = $request->validate($rules);
         $data['is_active'] = $request->boolean('is_active', true);

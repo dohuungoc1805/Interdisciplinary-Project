@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CouponType;
+use App\Enums\CouponKind;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,7 @@ class Coupon extends Model
 {
     protected $fillable = [
         'code',
+        'kind',
         'type',
         'value',
         'min_order_amount',
@@ -79,5 +81,28 @@ class Coupon extends Model
         }
 
         return min((float) $this->value, $subtotal);
+    }
+
+    public function discountForAmount(float $amount): float
+    {
+        if (! $this->isValidForAmount($amount)) {
+            return 0.0;
+        }
+
+        if ($this->type === CouponType::Percent->value) {
+            return min($amount, round($amount * ((float) $this->value / 100), 2));
+        }
+
+        return min((float) $this->value, $amount);
+    }
+
+    public function isShipping(): bool
+    {
+        return ($this->kind ?? CouponKind::Product->value) === CouponKind::Shipping->value;
+    }
+
+    public function kindLabel(): string
+    {
+        return $this->isShipping() ? 'Giảm vận chuyển' : 'Giảm sản phẩm';
     }
 }

@@ -13,6 +13,13 @@
                     <input id="code" class="admin-input font-mono uppercase" name="code" required placeholder="VD: WELCOME10" value="{{ old('code') }}" />
                 </div>
                 <div>
+                    <label class="admin-label" for="kind">Loại voucher</label>
+                    <select id="kind" name="kind" class="admin-input" required>
+                        <option value="product" @selected(old('kind', 'product') === 'product')>Giảm giá sản phẩm</option>
+                        <option value="shipping" @selected(old('kind') === 'shipping')>Giảm giá vận chuyển</option>
+                    </select>
+                </div>
+                <div>
                     <label class="admin-label" for="type">Loại</label>
                     <select id="type" name="type" class="admin-input" required>
                         <option value="percent" @selected(old('type') === 'percent')>Giảm theo %</option>

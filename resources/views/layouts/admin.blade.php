@@ -9,7 +9,7 @@
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-orange-50/30 antialiased text-slate-900">
     <div class="flex min-h-screen">
-        <aside class="flex w-64 flex-col border-r border-slate-800/90 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-200 shadow-xl">
+        <aside class="sticky top-0 flex h-screen max-h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-800/90 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-200 shadow-xl">
             <div class="border-b border-slate-800/80 px-4 py-6">
                 <a href="{{ route('admin.dashboard') }}" class="block text-base font-bold leading-snug tracking-tight text-white">
                     <span class="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">{{ config('app.name') }}</span>

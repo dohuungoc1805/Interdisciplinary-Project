@@ -59,6 +59,9 @@ class CartService
             if ($guest->applied_coupon_code && ! $userCart->applied_coupon_code) {
                 $userCart->update(['applied_coupon_code' => $guest->applied_coupon_code]);
             }
+            if ($guest->applied_shipping_coupon_code && ! $userCart->applied_shipping_coupon_code) {
+                $userCart->update(['applied_shipping_coupon_code' => $guest->applied_shipping_coupon_code]);
+            }
             $guest->items()->delete();
             $guest->delete();
         });
@@ -93,7 +96,7 @@ class CartService
     }
 
     /**
-     * @return array{subtotal: float, discount: float, shipping: float, total: float, coupon: ?Coupon, is_free_shipping: bool, free_shipping_threshold: float, remaining_for_free_shipping: float}
+     * @return array{subtotal: float, discount: float, shipping_discount: float, shipping: float, total: float, coupon: ?Coupon, shipping_coupon: ?Coupon, is_free_shipping: bool, free_shipping_threshold: float, remaining_for_free_shipping: float}
      */
     public function getTotals(Cart $cart): array
     {
@@ -108,7 +111,9 @@ class CartService
             $subtotal += $unit * (int) $line->quantity;
         }
         $discount = 0.0;
+        $shippingDiscount = 0.0;
         $coupon = null;
+        $shippingCoupon = null;
         if ($cart->applied_coupon_code) {
             $coupon = Coupon::query()->where('code', $cart->applied_coupon_code)->first();
             if ($coupon) {
@@ -119,15 +124,25 @@ class CartService
         }
         $freeShippingThreshold = (float) config('shop.free_shipping_threshold');
         $isFreeShipping = $freeShippingThreshold > 0 && $subtotal >= $freeShippingThreshold;
-        $shipping = $isFreeShipping ? 0.0 : (float) config('shop.default_shipping');
+        $baseShipping = $isFreeShipping ? 0.0 : (float) config('shop.default_shipping');
+        if ($cart->applied_shipping_coupon_code) {
+            $shippingCoupon = Coupon::query()->where('code', $cart->applied_shipping_coupon_code)->first();
+            if ($shippingCoupon) {
+                $shippingDiscount = $shippingCoupon->discountForAmount($subtotal > 0 ? $baseShipping : 0);
+            }
+        }
+        $shipping = max(0, $baseShipping - $shippingDiscount);
         $total = max(0, $subtotal - $discount) + $shipping;
 
         return [
             'subtotal' => $subtotal,
             'discount' => $discount,
+            'shipping_discount' => $shippingDiscount,
+            'base_shipping' => $baseShipping,
             'shipping' => $shipping,
             'total' => $total,
             'coupon' => $discount > 0 ? $coupon : null,
+            'shipping_coupon' => $shippingDiscount > 0 ? $shippingCoupon : null,
             'is_free_shipping' => $isFreeShipping,
             'free_shipping_threshold' => $freeShippingThreshold,
             'remaining_for_free_shipping' => max(0, $freeShippingThreshold - $subtotal),
