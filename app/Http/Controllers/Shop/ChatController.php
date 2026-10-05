@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Shop\ChatRequest;
 use App\Services\ChatbotProductContextService;
 use App\Services\GeminiService;
 use App\Services\SizeRecommendationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 
 class ChatController extends Controller
 {
@@ -18,15 +17,9 @@ class ChatController extends Controller
         private SizeRecommendationService $sizeRecommendationService,
     ) {}
 
-    public function store(Request $request): JsonResponse
+    public function store(ChatRequest $request): JsonResponse
     {
-        $key = 'chat:'.($request->user()?->id ?? $request->ip());
-        if (RateLimiter::tooManyAttempts($key, 20)) {
-            return response()->json(['reply' => 'Too many messages. Please wait a moment.'], 429);
-        }
-        RateLimiter::hit($key, 60);
-        $data = $request->validate(['message' => 'required|string|min:1|max:2000']);
-        $message = $data['message'];
+        $message = $request->validated('message');
 
         $ctx = 'Store: '.config('app.name').'. We sell fashion products online in Vietnam. Product links are internal store links. Payment: cash on delivery and online methods if available at checkout.';
         $candidates = $this->productContextService->findCandidates(

@@ -7,7 +7,7 @@ class SizeRecommendationService
     /**
      * Return a size recommendation when both height and weight are present.
      *
-     * @return array{height_cm: float, weight_kg: float, size: string, note: string}|null
+     * @return array{height_cm: float, weight_kg: float, size: string, audience: string, note: string}|null
      */
     public function recommend(string $message): ?array
     {
@@ -18,25 +18,52 @@ class SizeRecommendationService
             return null;
         }
 
-        $size = match (true) {
-            $weight <= 55 && $height <= 165 => 'S',
-            $weight <= 65 && $height <= 172 => 'M',
-            $weight <= 75 && $height <= 178 => 'L',
-            $weight <= 88 && $height <= 185 => 'XL',
-            default => 'XXL',
-        };
+        $isChildren = $this->isChildrenRequest($message);
+        $size = $isChildren
+            ? $this->recommendChildrenSize($height, $weight)
+            : $this->recommendAdultSize($height, $weight);
 
         return [
             'height_cm' => $height,
             'weight_kg' => $weight,
             'size' => $size,
-            'note' => 'Đây là size tham khảo theo form phổ thông; bạn nên đối chiếu bảng size của từng sản phẩm và ưu tiên số đo vòng ngực/vòng eo nếu có.',
+            'audience' => $isChildren ? 'children' : 'adult',
+            'note' => $isChildren
+                ? 'Đây là size trẻ em tham khảo theo chiều cao và cân nặng; bạn nên đối chiếu bảng size riêng của sản phẩm trước khi đặt.'
+                : 'Đây là size tham khảo theo form phổ thông; bạn nên đối chiếu bảng size của từng sản phẩm và ưu tiên số đo vòng ngực/vòng eo nếu có.',
         ];
     }
 
     public function isSizingRequest(string $message): bool
     {
         return preg_match('/\b(size|kích\s*cỡ|chọn\s*cỡ|mặc\s*cỡ|vừa\s*người)\b/iu', $message) === 1;
+    }
+
+    private function isChildrenRequest(string $message): bool
+    {
+        return preg_match('/trẻ\s*em|thiếu\s*nhi|\bbé\b|\bkids?\b|\bchild(?:ren)?\b|\bteen(?:ager)?\b/iu', $message) === 1;
+    }
+
+    private function recommendAdultSize(float $height, float $weight): string
+    {
+        return match (true) {
+            $weight <= 55 && $height <= 165 => 'S',
+            $weight <= 65 && $height <= 172 => 'M',
+            $weight <= 75 && $height <= 178 => 'L',
+            $weight <= 88 && $height <= 185 => 'XL',
+            default => 'XXL',
+        };
+    }
+
+    private function recommendChildrenSize(float $height, float $weight): string
+    {
+        return match (true) {
+            $height <= 110 || $weight <= 18 => '4 tuổi',
+            $height <= 125 || $weight <= 25 => '6 tuổi',
+            $height <= 135 || $weight <= 35 => '8 tuổi',
+            $height <= 150 || $weight <= 45 => '10 tuổi',
+            default => '12 tuổi',
+        };
     }
 
     private function parseHeight(string $message): ?float

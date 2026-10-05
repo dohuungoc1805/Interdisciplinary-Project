@@ -3,112 +3,54 @@
 @section('title', 'Tổng quan')
 
 @section('content')
-    <div class="admin-shell space-y-8">
-        <div class="admin-page-head">
-            <div>
-                <h1 class="admin-page-title">Tổng quan</h1>
-                <p class="admin-page-lead">Doanh thu, đơn hàng theo trạng thái và cảnh báo tồn kho.</p>
-            </div>
+    @php
+        $trend = fn (float $value) => $value >= 0 ? 'text-emerald-600' : 'text-rose-600';
+        $trendIcon = fn (float $value) => $value >= 0 ? '↑' : '↓';
+        $ordersTotal = max(1, (int) $ordersByStatus->sum());
+        $cancelled = (int) ($ordersByStatus['cancelled'] ?? 0);
+        $completed = (int) ($ordersByStatus['completed'] ?? 0);
+        $pending = (int) ($ordersByStatus['pending'] ?? 0);
+        $cancelledEnd = round($cancelled / $ordersTotal * 100, 2);
+        $completedEnd = round(($cancelled + $completed) / $ordersTotal * 100, 2);
+        $statusColors = ['cancelled' => 'bg-rose-400', 'completed' => 'bg-emerald-400', 'pending' => 'bg-amber-400', 'processing' => 'bg-violet-400', 'shipping' => 'bg-sky-400'];
+    @endphp
+
+    <div class="admin-shell space-y-6">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div><h1 class="admin-page-title">Tổng quan</h1><p class="admin-page-lead">Theo dõi tình hình kinh doanh của cửa hàng</p></div>
+            <form method="get" class="flex items-center gap-2"><label for="period" class="sr-only">Kỳ báo cáo</label><span class="text-xs text-slate-500">Kỳ báo cáo</span><select id="period" name="period" onchange="this.form.submit()" class="rounded-lg border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">@foreach($periods as $key => $label)<option value="{{ $key }}" @selected($period === $key)>{{ $label }}</option>@endforeach</select></form>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div class="admin-card border-orange-100/80 bg-gradient-to-br from-white to-orange-50/40">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Doanh thu 7 ngày</p>
-                <p class="mt-2 text-2xl font-bold text-slate-900">{{ number_format($revenue7, 0, ',', '.') }} <span class="text-base font-normal text-slate-500">₫</span></p>
-            </div>
-            <div class="admin-card">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Doanh thu 30 ngày</p>
-                <p class="mt-2 text-2xl font-bold text-slate-900">{{ number_format($revenue30, 0, ',', '.') }} <span class="text-base font-normal text-slate-500">₫</span></p>
-            </div>
-            <div class="admin-card border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/50">
-                <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Lợi nhuận gộp 30 ngày</p>
-                <p class="mt-2 text-2xl font-bold text-emerald-700">{{ number_format($grossProfit30, 0, ',', '.') }} <span class="text-base font-normal text-emerald-600">₫</span></p>
-            </div>
-            <div class="admin-card">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tổng tồn kho</p>
-                <p class="mt-2 text-2xl font-bold text-slate-900">{{ number_format($totalInventoryUnits, 0, ',', '.') }}</p>
-            </div>
-            <div class="admin-card">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">SKU hết hàng</p>
-                <p class="mt-2 text-2xl font-bold text-rose-600">{{ number_format($outOfStockCount, 0, ',', '.') }}</p>
-            </div>
-            <div class="admin-card border-orange-200/60 bg-gradient-to-br from-orange-50 to-white">
-                <p class="text-xs font-semibold uppercase tracking-wide text-orange-800/90">Người dùng đã đăng ký</p>
-                <p class="mt-2 text-2xl font-bold text-orange-600">{{ $userCount }}</p>
-            </div>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="admin-card border-blue-100 bg-blue-50/30 p-4"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-500 text-lg text-white shadow-sm" aria-hidden="true">₫</span><p class="text-xs font-medium text-slate-600">Doanh thu {{ $period === '7' || $period === '30' ? 'trong kỳ' : '' }}</p></div><span class="text-xl text-blue-400" aria-hidden="true">⌁</span></div><p class="mt-4 text-2xl font-bold text-slate-900">{{ number_format($currentRevenue, 0, ',', '.') }} <span class="text-sm font-normal text-slate-500">₫</span></p><p class="mt-2 text-xs font-semibold {{ $trend($revenueChange) }}">{{ $trendIcon($revenueChange) }} {{ number_format(abs($revenueChange), 1, ',', '.') }}% <span class="font-normal text-slate-500">so với kỳ trước</span></p></div>
+            <div class="admin-card border-emerald-100 bg-emerald-50/30 p-4"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500 text-lg text-white shadow-sm" aria-hidden="true">▣</span><p class="text-xs font-medium text-slate-600">Lợi nhuận gộp</p></div><span class="text-xl text-emerald-400" aria-hidden="true">⌁</span></div><p class="mt-4 text-2xl font-bold text-slate-900">{{ number_format($currentProfit, 0, ',', '.') }} <span class="text-sm font-normal text-slate-500">₫</span></p><p class="mt-2 text-xs font-semibold {{ $trend($profitChange) }}">{{ $trendIcon($profitChange) }} {{ number_format(abs($profitChange), 1, ',', '.') }}% <span class="font-normal text-slate-500">so với kỳ trước</span></p></div>
+            <div class="admin-card border-violet-100 bg-violet-50/30 p-4"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-violet-500 text-lg text-white shadow-sm" aria-hidden="true">▣</span><p class="text-xs font-medium text-slate-600">Đơn hàng</p></div><span class="text-xl text-violet-400" aria-hidden="true">⌁</span></div><p class="mt-4 text-2xl font-bold text-slate-900">{{ number_format($currentOrders, 0, ',', '.') }}</p><p class="mt-2 text-xs font-semibold {{ $trend($ordersChange) }}">{{ $trendIcon($ordersChange) }} {{ number_format(abs($ordersChange), 1, ',', '.') }}% <span class="font-normal text-slate-500">so với kỳ trước</span></p></div>
+            <div class="admin-card border-orange-100 bg-orange-50/30 p-4"><div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-orange-400 text-lg text-white shadow-sm" aria-hidden="true">♙</span><p class="text-xs font-medium text-slate-600">Người dùng</p></div><span class="text-xl text-orange-400" aria-hidden="true">⌁</span></div><p class="mt-4 text-2xl font-bold text-slate-900">{{ number_format($userCount, 0, ',', '.') }}</p><p class="mt-2 text-xs font-semibold text-emerald-600">↑ <span class="font-normal text-slate-500">Tài khoản đã đăng ký</span></p></div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-2">
-            <div class="admin-card">
-                <h2 class="mb-4 text-sm font-bold text-slate-800">Đơn theo trạng thái</h2>
-                <ul class="space-y-2 text-sm">
-                    @foreach($ordersByStatus as $s => $c)
-                        <li class="flex justify-between rounded-xl bg-slate-50 px-4 py-2.5">
-                            <span class="text-slate-600">{{ \App\Enums\OrderStatus::tryFrom($s)?->label() ?? $s }}</span>
-                            <span class="font-semibold text-slate-900">{{ $c }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-            <div class="admin-card">
-                <h2 class="mb-4 text-sm font-bold text-slate-800">Tồn kho thấp (≤ {{ config('shop.low_stock_threshold') }})</h2>
-                <ul class="max-h-52 space-y-2 overflow-y-auto text-sm">
-                    @forelse($lowStock as $v)
-                        <li class="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-amber-950">
-                            {{ $v->product->name }} — {{ $v->size }}/{{ $v->color }}: <strong>{{ $v->stock }}</strong>
-                        </li>
-                    @empty
-                        <li class="text-slate-500">Mọi biến thể đều trên ngưỡng.</li>
-                    @endforelse
-                </ul>
-            </div>
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
+            <div class="admin-card p-5"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-bold text-slate-800">Doanh thu theo ngày</h2><p class="mt-1 text-xs text-slate-500">Đơn hoàn thành · {{ $periods[$period] }}</p></div><span class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $periods[$period] }}</span></div><div id="revenue-chart-wrap" class="relative h-[340px] w-full overflow-visible lg:h-[390px]"><svg id="revenue-chart" viewBox="0 0 900 300" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Biểu đồ doanh thu theo thời gian"><line x1="48" y1="20" x2="48" y2="255" stroke="#e2e8f0"/><line x1="48" y1="255" x2="880" y2="255" stroke="#e2e8f0"/><polyline id="revenue-line" fill="none" stroke="#2878f0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><g id="revenue-points"></g><g id="revenue-labels" fill="#64748b" font-size="11" text-anchor="middle"></g></svg><div id="revenue-tooltip" class="pointer-events-none absolute z-10 hidden -translate-x-1/2 -translate-y-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-lg"><div id="revenue-tooltip-date"></div><div id="revenue-tooltip-value" class="mt-0.5 text-blue-200"></div></div></div></div>
+            <div class="admin-card p-5"><div class="mb-4"><h2 class="text-sm font-bold text-slate-800">Đơn hàng theo trạng thái</h2><p class="mt-1 text-xs text-slate-500">{{ $periods[$period] }} · {{ $ordersTotal }} tổng đơn</p></div><div class="flex items-center gap-5"><div class="relative grid h-44 w-44 shrink-0 place-items-center rounded-full" style="background: conic-gradient(#fb7185 0 {{ $cancelledEnd }}%, #34d399 {{ $cancelledEnd }}% {{ $completedEnd }}%, #fbbf24 {{ $completedEnd }}% 100%);"><div class="grid h-28 w-28 place-items-center rounded-full bg-white text-center"><strong class="text-2xl text-slate-800">{{ $ordersTotal }}</strong><span class="text-[10px] text-slate-500">Tổng đơn hàng</span></div></div><div class="min-w-0 flex-1 space-y-3 text-xs">@foreach(\App\Enums\OrderStatus::cases() as $status) @php $count = (int) ($ordersByStatus[$status->value] ?? 0); @endphp <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 shrink-0 rounded-full {{ $statusColors[$status->value] ?? 'bg-slate-300' }}"></span><span class="min-w-0 flex-1 truncate text-slate-600">{{ $status->label() }}</span><strong class="text-slate-800">{{ $count }}</strong><span class="w-8 text-right text-slate-400">{{ round($count / $ordersTotal * 100) }}%</span></div>@endforeach</div></div></div>
         </div>
 
-        <div class="admin-card">
-            <h2 class="mb-4 text-sm font-bold text-slate-800">Doanh thu theo ngày (30 ngày gần nhất)</h2>
-            <div class="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-600">
-                        <tr>
-                            <th class="px-4 py-2 text-left font-semibold">Ngày</th>
-                            <th class="px-4 py-2 text-right font-semibold">Doanh thu</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($dailyRevenue->reverse() as $day => $total)
-                            <tr class="border-t border-slate-100">
-                                <td class="px-4 py-2 text-slate-700">{{ \Illuminate\Support\Carbon::parse($day)->format('d/m/Y') }}</td>
-                                <td class="px-4 py-2 text-right font-medium text-slate-900">{{ number_format($total, 0, ',', '.') }} ₫</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <div class="grid gap-4 xl:grid-cols-3">
+            <div class="admin-card p-0"><div class="flex items-center justify-between border-b border-slate-100 px-4 py-4"><h2 class="text-sm font-bold text-slate-800">★ &nbsp;Sản phẩm bán chạy</h2><a href="{{ route('admin.products.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Xem tất cả</a></div><div class="divide-y divide-slate-100">@forelse($topProducts as $index => $product)<div class="flex items-center gap-3 px-4 py-3 text-xs"><span class="w-4 text-slate-400">{{ $index + 1 }}</span><span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-lg" aria-hidden="true">▧</span><span class="min-w-0 flex-1 truncate"><strong class="block truncate text-slate-800">{{ $product->name }}</strong><span class="text-slate-400">Sản phẩm thời trang</span></span><strong class="text-slate-700">{{ $product->sold }}</strong></div>@empty<div class="px-4 py-8 text-center text-sm text-slate-500">Chưa có dữ liệu.</div>@endforelse</div></div>
+            <div class="admin-card p-0"><div class="flex items-center justify-between border-b border-slate-100 px-4 py-4"><h2 class="text-sm font-bold text-slate-800">▤ &nbsp;Đơn hàng gần đây</h2><a href="{{ route('admin.orders.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Xem tất cả</a></div><div class="divide-y divide-slate-100">@forelse($recentOrders as $order)<div class="flex items-center gap-2 px-4 py-3 text-xs"><span class="min-w-0 flex-1"><strong class="block truncate text-slate-800">#{{ $order->order_number }}</strong><span class="text-slate-400">{{ $order->user?->name ?? $order->user?->email ?? 'Khách hàng' }}</span></span><strong class="text-slate-700">{{ number_format($order->total, 0, ',', '.') }} ₫</strong><span class="rounded-full px-2 py-1 {{ $order->status === 'completed' ? 'bg-emerald-50 text-emerald-700' : ($order->status === 'cancelled' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700') }}">{{ $order->statusEnum()?->label() ?? $order->status }}</span></div>@empty<div class="px-4 py-8 text-center text-sm text-slate-500">Chưa có đơn hàng.</div>@endforelse</div></div>
+            <div class="admin-card p-0"><div class="flex items-center justify-between border-b border-slate-100 px-4 py-4"><h2 class="text-sm font-bold text-slate-800">⚠ &nbsp;Cảnh báo tồn kho</h2><a href="{{ route('admin.products.index', ['availability' => 'low_stock']) }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Xem tất cả</a></div><div class="divide-y divide-slate-100">@forelse($lowStock->take(5) as $variant)<div class="flex items-center gap-3 px-4 py-3 text-xs"><span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-lg" aria-hidden="true">▧</span><span class="min-w-0 flex-1 truncate"><strong class="block truncate text-slate-800">{{ $variant->product->name }} — {{ $variant->size }}/{{ $variant->color }}</strong><span class="text-slate-400">Tồn kho</span></span><span class="rounded-full px-2 py-1 {{ $variant->stock <= 2 ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700' }}">{{ $variant->stock <= 2 ? 'Rất thấp' : 'Sắp hết' }}</span><strong class="text-slate-700">{{ $variant->stock }}</strong></div>@empty<div class="px-4 py-8 text-center text-sm text-slate-500">Tồn kho ổn định.</div>@endforelse</div></div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-2">
-            <div class="admin-card">
-                <h2 class="mb-4 text-sm font-bold text-slate-800">Sản phẩm bán chạy (theo số lượng)</h2>
-                <ol class="list-inside list-decimal space-y-2 text-sm text-slate-700">
-                    @foreach($topProducts as $r)
-                        <li><span class="font-medium text-slate-900">{{ $r->name }}</span> — {{ $r->sold }} đã bán</li>
-                    @endforeach
-                </ol>
-            </div>
-
-            <div class="admin-card">
-                <h2 class="mb-4 text-sm font-bold text-slate-800">Sản phẩm bán chậm (30 ngày)</h2>
-                <ul class="max-h-56 space-y-2 overflow-y-auto text-sm">
-                    @forelse($slowProducts as $row)
-                        <li class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                            <div class="font-medium text-slate-900">{{ $row->name }} — {{ $row->size }}/{{ $row->color }}</div>
-                            <div class="text-slate-600">Đã bán 30 ngày: <strong>{{ $row->sold_30d }}</strong> · Tồn: <strong>{{ $row->stock }}</strong></div>
-                        </li>
-                    @empty
-                        <li class="text-slate-500">Không có dữ liệu sản phẩm bán chậm.</li>
-                    @endforelse
-                </ul>
-            </div>
-        </div>
+        <div class="admin-card"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-bold text-slate-800">Thao tác nhanh</h2><p class="mt-1 text-xs text-slate-500">Các công việc thường dùng</p></div></div><div class="grid gap-3 sm:grid-cols-3"><a href="{{ route('admin.products.create') }}" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50"><span class="rounded-lg bg-blue-100 px-2 py-1 text-lg" aria-hidden="true">＋</span>Thêm sản phẩm</a><a href="{{ route('admin.orders.index') }}" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50"><span class="rounded-lg bg-violet-100 px-2 py-1 text-lg" aria-hidden="true">▣</span>Xem đơn hàng</a><a href="{{ route('admin.products.index', ['availability' => 'low_stock']) }}" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50"><span class="rounded-lg bg-amber-100 px-2 py-1 text-lg" aria-hidden="true">▤</span>Xem tồn kho</a></div></div>
     </div>
+
+    <script>
+        (() => {
+            const chart = @json($chart), line = document.getElementById('revenue-line'), pointsGroup = document.getElementById('revenue-points'), labelsGroup = document.getElementById('revenue-labels'), chartWrap = document.getElementById('revenue-chart-wrap'), tooltip = document.getElementById('revenue-tooltip'), tooltipDate = document.getElementById('revenue-tooltip-date'), tooltipValue = document.getElementById('revenue-tooltip-value');
+            if (!line || !chart.values.length) return;
+            const width = 900, height = 300, left = 48, right = 20, top = 20, bottom = 45, max = Math.max(...chart.values, 1), step = chart.values.length > 1 ? (width - left - right) / (chart.values.length - 1) : 0;
+            const coords = chart.values.map((value, index) => [left + index * step, top + (1 - value / max) * (height - top - bottom)]);
+            line.setAttribute('points', coords.map(([x, y]) => `${x},${y}`).join(' '));
+            const showEvery = Math.max(1, Math.ceil(chart.labels.length / 7));
+            coords.forEach(([x, y], index) => { const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', '5'); circle.setAttribute('fill', '#2878f0'); circle.setAttribute('class', 'cursor-pointer'); circle.addEventListener('mouseenter', () => { const svgRect = document.getElementById('revenue-chart').getBoundingClientRect(), wrapRect = chartWrap.getBoundingClientRect(); tooltip.style.left = `${(x / width) * svgRect.width + svgRect.left - wrapRect.left}px`; tooltip.style.top = `${(y / height) * svgRect.height + svgRect.top - wrapRect.top - 10}px`; tooltipDate.textContent = chart.labels[index]; tooltipValue.textContent = `${new Intl.NumberFormat('vi-VN').format(chart.values[index])} ₫`; tooltip.classList.remove('hidden'); circle.setAttribute('r', '8'); }); circle.addEventListener('mouseleave', () => { tooltip.classList.add('hidden'); circle.setAttribute('r', '5'); }); pointsGroup.appendChild(circle); if (index % showEvery === 0 || index === coords.length - 1) { const label = document.createElementNS('http://www.w3.org/2000/svg', 'text'); label.setAttribute('x', x); label.setAttribute('y', height - 15); label.textContent = chart.labels[index]; labelsGroup.appendChild(label); } });
+        })();
+    </script>
 @endsection

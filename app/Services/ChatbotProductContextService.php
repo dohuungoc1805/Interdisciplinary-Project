@@ -15,7 +15,7 @@ class ChatbotProductContextService
         $categoryTerms = $this->audienceCategoryTerms($message);
 
         $query = Product::query()
-            ->with(['category:id,name', 'variants:id,product_id,size,stock'])
+            ->with(['category:id,name', 'variants:id,product_id,size,color,stock'])
             ->where('is_active', true);
 
         if ($categoryTerms !== []) {
@@ -54,6 +54,13 @@ class ChatbotProductContextService
                 ->unique()
                 ->values()
                 ->all();
+            $availableColors = $product->variants
+                ->filter(fn ($variant) => $variant->stock > 0)
+                ->pluck('color')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
             return [
                 'name' => $product->name,
@@ -68,6 +75,7 @@ class ChatbotProductContextService
                 'review_count' => (int) $product->review_count,
                 'in_stock' => $inStock,
                 'available_sizes' => $availableSizes,
+                'available_colors' => $availableColors,
                 'product_url' => route('products.show', $product->slug),
             ];
         })->all();
@@ -151,6 +159,9 @@ class ChatbotProductContextService
             $sizeAvailability = $this->sizeAvailabilityLine($candidate, $sizeRecommendation);
             if ($sizeAvailability !== null) {
                 $lines[] = '  '.$sizeAvailability;
+            }
+            if (($candidate['available_colors'] ?? []) !== []) {
+                $lines[] = '  Màu còn hàng: '.implode(', ', $candidate['available_colors']).'.';
             }
         }
 

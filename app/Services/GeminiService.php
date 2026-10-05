@@ -35,9 +35,10 @@ class GeminiService
             ."2) Never invent product names, prices, stock, or links.\n"
             ."3) If relevant products exist, recommend 2-3 items with a short reason and include their exact product_url.\n"
             ."4) If SIZE_RECOMMENDATION is present, clearly state the recommended size and explain that it is only a reference; do not present it as a guarantee. Only suggest a product size when it appears in that product's available_sizes.\n"
-            ."5) If the customer has not provided both height and weight but asks about sizing, ask for both values in cm and kg.\n"
-            ."6) If no relevant product exists, say so and ask one follow-up question about style, category, or budget.\n"
-            ."7) Keep the answer concise, natural Vietnamese.\n";
+            ."5) Only mention colors from available_colors and sizes from available_sizes; never invent variants.\n"
+            ."6) If the customer has not provided both height and weight but asks about sizing, ask for both values in cm and kg.\n"
+            ."7) If no relevant product exists, say so and ask one follow-up question about style, category, or budget.\n"
+            ."8) Keep the answer concise, natural Vietnamese.\n";
 
         $text = $policy;
         if ($systemContext) {
