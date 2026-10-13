@@ -9,7 +9,7 @@
     <a href="{{ route('products.index') }}" class="text-sm font-medium text-[color:var(--accent)] hover:underline">&larr; Quay lại cửa hàng</a>
     <div class="mt-6 grid gap-10 md:grid-cols-2">
         <div class="shop-shell overflow-hidden p-2">
-            <img src="{{ $img }}" alt="" class="max-h-[560px] w-full rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] object-cover" />
+            <img id="product-main-image" src="{{ $img }}" data-default-src="{{ $img }}" alt="{{ $product->name }}" class="max-h-[560px] w-full rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] object-cover" />
             @if($product->images->count())
                 <div class="mt-3 flex flex-wrap gap-2">
                     @foreach($product->images as $pi)
@@ -43,23 +43,87 @@
             </p>
             <div class="prose prose-sm mt-5 max-w-none text-[color:var(--text-main)]">{!! nl2br(e($product->description)) !!}</div>
 
-            <form class="shop-shell mt-8 space-y-4 p-5" method="post" action="{{ route('cart.add') }}">@csrf
-                <div>
-                    <label class="text-sm font-semibold text-[color:var(--primary)]">Phiên bản (size / màu / tồn kho)</label>
-                    <select name="product_variant_id" class="field-control mt-1" required>
-                        @foreach($product->variants as $v)
-                            <option value="{{ $v->id }}">{{ $v->size }} — {{ $v->color }} (còn {{ $v->stock }})</option>
-                        @endforeach
-                    </select>
+            <form id="product-add-form" class="shop-shell mt-8 space-y-4 p-5" method="post" action="{{ route('cart.add') }}">@csrf
+                @php
+                    $availableVariants = $product->variants->where('stock', '>', 0);
+                    $variantSizes = $availableVariants->pluck('size')->filter()->unique()->values();
+                    $variantColors = $availableVariants->pluck('color')->filter()->unique()->values();
+                @endphp
+                <input id="product-variant-id" type="hidden" name="product_variant_id" value="{{ $availableVariants->first()?->id }}" required />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="product-size" class="text-sm font-semibold text-[color:var(--primary)]">Kích cỡ</label>
+                        <select id="product-size" class="field-control mt-1" {{ $variantSizes->isEmpty() ? 'disabled' : '' }}>
+                            @foreach($variantSizes as $size)<option value="{{ $size }}">{{ $size }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="product-color" class="text-sm font-semibold text-[color:var(--primary)]">Màu sắc</label>
+                        <select id="product-color" class="field-control mt-1" {{ $variantColors->isEmpty() ? 'disabled' : '' }}>
+                            @foreach($variantColors as $color)<option value="{{ $color }}">{{ $color }}</option>@endforeach
+                        </select>
+                    </div>
                 </div>
+                <p id="variant-stock" class="text-sm font-medium text-emerald-700" aria-live="polite"></p>
+                @if($availableVariants->isEmpty())<p class="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">Sản phẩm hiện đã hết hàng.</p>@endif
                 <div>
                     <label class="text-sm font-semibold text-[color:var(--primary)]">Số lượng</label>
-                    <input type="number" name="quantity" value="1" min="1" class="field-control mt-1 w-28" />
+                    <input id="product-quantity" type="number" name="quantity" value="1" min="1" max="{{ $availableVariants->first()?->stock ?? 1 }}" class="field-control mt-1 w-28" {{ $availableVariants->isEmpty() ? 'disabled' : '' }} />
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button class="primary-cta" type="submit">Thêm vào giỏ</button>
+                    <button id="product-add-button" class="primary-cta disabled:cursor-not-allowed disabled:opacity-50" type="submit" {{ $availableVariants->isEmpty() ? 'disabled' : '' }}>Thêm vào giỏ</button>
                 </div>
             </form>
+            @php
+                $variantPayload = $availableVariants->map(fn ($variant) => [
+                    'id' => $variant->id,
+                    'size' => $variant->size,
+                    'color' => $variant->color,
+                    'stock' => (int) $variant->stock,
+                    'image' => $variant->imageUrl(),
+                ])->values();
+            @endphp
+            <script>
+                (() => {
+                    const variants = {{ \Illuminate\Support\Js::from($variantPayload) }};
+                    const size = document.getElementById('product-size');
+                    const color = document.getElementById('product-color');
+                    const variantId = document.getElementById('product-variant-id');
+                    const quantity = document.getElementById('product-quantity');
+                    const stockText = document.getElementById('variant-stock');
+                    const button = document.getElementById('product-add-button');
+                    const mainImage = document.getElementById('product-main-image');
+                    if (!size || !color || !variantId || !quantity || !stockText || !button) return;
+                    const syncVariant = (changedBy = null) => {
+                        // Always keep both selects usable and synchronize the other field.
+                        if (changedBy === 'size') {
+                            const matchingVariant = variants.find(item => item.size === size.value);
+                            if (matchingVariant) color.value = matchingVariant.color;
+                        } else if (changedBy === 'color') {
+                            const matchingVariant = variants.find(item => item.color === color.value);
+                            if (matchingVariant) size.value = matchingVariant.size;
+                        }
+                        const variant = variants.find(item => item.size === size.value && item.color === color.value);
+                        const stock = variant?.stock ?? 0;
+                        variantId.value = variant?.id ?? '';
+                        quantity.max = stock || 1;
+                        if (Number(quantity.value) > stock) quantity.value = stock || 1;
+                        stockText.textContent = stock > 0 ? `Còn ${stock} sản phẩm cho lựa chọn này.` : 'Size và màu này hiện đã hết hàng.';
+                        stockText.className = stock > 0 ? 'text-sm font-medium text-emerald-700' : 'text-sm font-medium text-rose-600';
+                        button.disabled = stock < 1;
+                        quantity.disabled = stock < 1;
+                        const colorImage = variants.find(item => item.color === color.value && item.image)?.image;
+                        if (mainImage) mainImage.src = variant?.image || colorImage || mainImage.dataset.defaultSrc;
+                    };
+                    size.addEventListener('change', () => syncVariant('size'));
+                    color.addEventListener('change', () => syncVariant('color'));
+                    if (variants[0]) {
+                        size.value = variants[0].size;
+                        color.value = variants[0].color;
+                    }
+                    syncVariant();
+                })();
+            </script>
             @auth
                 <form method="post" action="{{ route('wishlist.toggle', $product) }}" class="mt-3">@csrf
                     <button type="submit" class="secondary-cta">Thêm vào yêu thích</button>

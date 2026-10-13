@@ -8,6 +8,8 @@
             'sku' => $variant->sku,
             'stock' => $variant->stock,
             'price' => $variant->price,
+            'image_path' => $variant->image_path,
+            'image_url' => $variant->imageUrl(),
         ])->values()->all());
     @endphp
     <div class="admin-shell max-w-2xl">
@@ -51,6 +53,16 @@
                 <div>
                     <label class="admin-label" for="sku">SKU sản phẩm</label>
                     <input id="sku" name="sku" class="admin-input font-mono text-xs" value="{{ old('sku', $product->sku) }}" />
+                </div>
+                <div>
+                    <label class="admin-label" for="status">Trạng thái sản phẩm</label>
+                    <select id="status" name="status" class="admin-input">
+                        @php $currentStatus = old('status', $product->status ?? ($product->is_active ? 'active' : 'discontinued')); @endphp
+                        <option value="active" @selected($currentStatus === 'active')>Đang bán</option>
+                        <option value="draft" @selected($currentStatus === 'draft')>Bản nháp</option>
+                        <option value="hidden" @selected($currentStatus === 'hidden')>Tạm ẩn</option>
+                        <option value="discontinued" @selected($currentStatus === 'discontinued')>Ngừng kinh doanh</option>
+                    </select>
                 </div>
                 <div>
                     <label class="admin-label" for="image">Thay ảnh chính</label>

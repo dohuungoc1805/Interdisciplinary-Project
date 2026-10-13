@@ -15,19 +15,21 @@ class ProductsTemplateExport implements FromCollection, WithHeadings
             'name',
             'category_id',
             'description',
+            'main_image_url',
             'price',
             'compare_price',
             'stock',
             'variant_size',
             'variant_color',
             'is_active',
+            'status',
         ];
     }
 
     public function collection(): Collection
     {
         return collect([
-            ['SKU-001', 'Áo thun mẫu', 1, 'Mô tả sản phẩm mẫu', 199000, 249000, 100, 'Freesize', 'Mặc định', 1],
+            ['SKU-001', 'Áo thun mẫu', 1, 'Mô tả sản phẩm mẫu', '', 199000, 249000, 100, 'Freesize', 'Mặc định', 1, 'active'],
         ]);
     }
 }

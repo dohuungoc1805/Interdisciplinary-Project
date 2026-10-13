@@ -22,6 +22,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('products/export', [ProductController::class, 'export'])->name('products.export');
     Route::get('products/template', [ProductController::class, 'template'])->name('products.template');
     Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
+    Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
+    Route::get('products/inventory-movements', [ProductController::class, 'inventoryMovements'])->name('products.inventory-movements');
     Route::resource('products', ProductController::class)->except(['show']);
     Route::resource('coupons', CouponController::class)->except(['show']);
     Route::resource('banners', BannerController::class)->except(['show']);

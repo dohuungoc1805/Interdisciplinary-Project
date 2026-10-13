@@ -10,6 +10,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\InventoryMovement;
+use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +25,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
+    public function __construct(private InventoryService $inventoryService) {}
+
     public function index(Request $request): View
     {
         $q = Product::query()->with('category')->withSum('variants as stock_total', 'stock');
@@ -50,6 +54,9 @@ class ProductController extends Controller
         }
         if ($request->filled('visibility')) {
             $q->where('is_active', $request->string('visibility')->toString() === 'active');
+        }
+        if ($request->filled('status')) {
+            $q->where('status', $request->string('status')->toString());
         }
         if ($request->boolean('sale')) {
             $q->where('is_on_sale', true);
@@ -140,6 +147,7 @@ class ProductController extends Controller
                     'product_id' => $product->id,
                     'size' => $v['size'],
                     'color' => $v['color'],
+                    'image_path' => isset($v['image']) && $v['image'] instanceof \Illuminate\Http\UploadedFile ? $v['image']->store('products/variants', 'public') : ($v['image_path'] ?? null),
                     'sku' => $v['sku'] ?? null,
                     'price' => $v['price'] ?? null,
                     'stock' => (int) $v['stock'],
@@ -185,6 +193,7 @@ class ProductController extends Controller
         if (! isset($data['main_image'])) {
             unset($data['main_image']);
         }
+        $oldVariantImages = $product->variants()->pluck('image_path')->filter()->values()->all();
         DB::transaction(function () use ($request, $product, $data, $variants, $oldMainImage) {
             $product->update($data);
             if (isset($data['main_image']) && $oldMainImage && ! preg_match('#^https?://#i', (string) $oldMainImage)) {
@@ -196,6 +205,7 @@ class ProductController extends Controller
                     'product_id' => $product->id,
                     'size' => $v['size'],
                     'color' => $v['color'],
+                    'image_path' => isset($v['image']) && $v['image'] instanceof \Illuminate\Http\UploadedFile ? $v['image']->store('products/variants', 'public') : ($v['image_path'] ?? null),
                     'sku' => $v['sku'] ?? null,
                     'price' => $v['price'] ?? null,
                     'stock' => (int) $v['stock'],
@@ -213,23 +223,70 @@ class ProductController extends Controller
                 }
             }
         });
+        foreach ($oldVariantImages as $oldVariantImage) {
+            if (! collect($variants)->contains(fn ($variant) => ($variant['image_path'] ?? null) === $oldVariantImage)) {
+                Storage::disk('public')->delete($oldVariantImage);
+            }
+        }
 
         return redirect()->route('admin.products.index')->with('status', 'Đã cập nhật sản phẩm.');
     }
 
     public function destroy(Product $product): RedirectResponse
     {
-        DB::transaction(function () use ($product) {
-            foreach ($product->images as $img) {
-                Storage::disk('public')->delete($img->path);
-            }
-            if (! empty($product->main_image)) {
-                Storage::disk('public')->delete($product->main_image);
-            }
-            $product->delete();
+        $product->update(['is_active' => false]);
+
+        return redirect()->route('admin.products.index')->with('status', 'Đã chuyển sản phẩm sang trạng thái Ngừng kinh doanh.');
+    }
+
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'product_ids' => ['required', 'array', 'min:1'],
+            'product_ids.*' => ['integer', 'distinct', 'exists:products,id'],
+            'action' => ['required', 'in:activate,deactivate,delete,category,price,price_increase_percent,price_decrease_percent,stock,stock_increase,stock_decrease'],
+            'category_id' => ['required_if:action,category', 'nullable', 'exists:categories,id'],
+            'price' => ['required_if:action,price', 'nullable', 'numeric', 'min:0'],
+            'stock' => ['required_if:action,stock', 'nullable', 'integer', 'min:0', 'max:100000'],
+            'percent' => ['required_if:action,price_increase_percent,price_decrease_percent', 'nullable', 'numeric', 'min:0', 'max:1000'],
+            'quantity' => ['required_if:action,stock_increase,stock_decrease', 'nullable', 'integer', 'min:0', 'max:100000'],
+        ]);
+
+        $products = Product::query()->whereIn('id', $data['product_ids'])->get();
+        DB::transaction(function () use ($products, $data) {
+            match ($data['action']) {
+                'activate' => $products->each->update(['is_active' => true]),
+                'deactivate', 'delete' => $products->each->update(['is_active' => false]),
+                'category' => $products->each->update(['category_id' => (int) $data['category_id']]),
+                'price' => $products->each->update(['price' => (float) $data['price']]),
+                'stock' => $products->each(fn (Product $product) => $product->variants->each(fn (ProductVariant $variant) => $this->inventoryService->setStock($variant, (int) $data['stock']))),
+                'price_increase_percent' => $products->each(fn (Product $product) => $product->update(['price' => round((float) $product->price * (1 + ((float) $data['percent'] / 100)), 2)])),
+                'price_decrease_percent' => $products->each(fn (Product $product) => $product->update(['price' => round(max(0, (float) $product->price * (1 - ((float) $data['percent'] / 100))), 2)])),
+                'stock_increase' => $products->each(fn (Product $product) => $product->variants->each(fn (ProductVariant $variant) => $this->inventoryService->setStock($variant, min(100000, (int) $variant->stock + (int) $data['quantity'])))),
+                'stock_decrease' => $products->each(fn (Product $product) => $product->variants->each(fn (ProductVariant $variant) => $this->inventoryService->setStock($variant, max(0, (int) $variant->stock - (int) $data['quantity'])))),
+            };
         });
 
-        return redirect()->route('admin.products.index')->with('status', 'Đã xóa sản phẩm.');
+        $message = match ($data['action']) {
+            'activate' => 'Đã bật bán các sản phẩm đã chọn.',
+            'deactivate', 'delete' => 'Đã chuyển các sản phẩm đã chọn sang Ngừng kinh doanh.',
+            'category' => 'Đã cập nhật danh mục cho các sản phẩm đã chọn.',
+            'price' => 'Đã cập nhật giá cho các sản phẩm đã chọn.',
+            'stock' => 'Đã cập nhật tồn kho cho các biến thể của sản phẩm đã chọn.',
+            'price_increase_percent' => 'Đã tăng giá theo phần trăm cho các sản phẩm đã chọn.',
+            'price_decrease_percent' => 'Đã giảm giá theo phần trăm cho các sản phẩm đã chọn.',
+            'stock_increase' => 'Đã tăng tồn kho cho các biến thể của sản phẩm đã chọn.',
+            'stock_decrease' => 'Đã giảm tồn kho cho các biến thể của sản phẩm đã chọn.',
+        };
+
+        return back()->with('status', $message);
+    }
+
+    public function inventoryMovements(Request $request): View
+    {
+        $movements = InventoryMovement::query()->with('variant.product')->latest('moved_at')->paginate(30)->withQueryString();
+
+        return view('admin.products.inventory-movements', compact('movements'));
     }
 
     private function validateProduct(Request $request, ?int $productId = null, bool $requireImage = false): array
@@ -249,6 +306,7 @@ class ProductController extends Controller
             'is_on_sale' => 'boolean',
             'is_new' => 'boolean',
             'is_active' => 'boolean',
+            'status' => 'nullable|in:draft,active,hidden,discontinued',
             'image' => ($requireImage ? 'required' : 'nullable').'|image|max:4096',
             'gallery.*' => 'nullable|image|max:4096',
             'variants' => 'required|array|min:1',
@@ -257,13 +315,20 @@ class ProductController extends Controller
             'variants.*.sku' => 'nullable|string|max:64',
             'variants.*.stock' => 'required|integer|min:0|max:1000',
             'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.image' => 'nullable|image|max:4096',
+            'variants.*.image_path' => 'nullable|string|max:500',
         ];
         $data = $request->validate($rules);
         $data['is_featured'] = $request->boolean('is_featured');
         $data['is_hot'] = $request->boolean('is_hot');
         $data['is_on_sale'] = $request->boolean('is_on_sale');
         $data['is_new'] = $request->boolean('is_new');
-        $data['is_active'] = $request->boolean('is_active');
+        $data['status'] = $request->input('status') ?: ($request->boolean('is_active') ? 'active' : 'hidden');
+        $data['is_active'] = $data['status'] === 'active';
+
+        if (! empty($data['sku']) && Product::query()->where('sku', $data['sku'])->when($productId, fn ($q) => $q->where('id', '!=', $productId))->exists()) {
+            throw ValidationException::withMessages(['sku' => 'SKU sản phẩm đã tồn tại.']);
+        }
 
         $variantKeys = collect($data['variants'])
             ->map(fn (array $variant) => Str::lower(trim($variant['size'])).'|'.Str::lower(trim($variant['color'])));
@@ -273,19 +338,28 @@ class ProductController extends Controller
             ]);
         }
 
+        $variantSkus = collect($data['variants'])->pluck('sku')->filter()->map(fn ($sku) => Str::lower(trim((string) $sku)));
+        if ($variantSkus->count() !== $variantSkus->unique()->count()) {
+            throw ValidationException::withMessages(['variants' => 'SKU của các biến thể không được trùng nhau.']);
+        }
+        if ($variantSkus->isNotEmpty() && ProductVariant::query()->whereIn('sku', $variantSkus->values()->all())->when($productId, fn ($q) => $q->where('product_id', '!=', $productId))->exists()) {
+            throw ValidationException::withMessages(['variants' => 'SKU biến thể đã tồn tại ở sản phẩm khác.']);
+        }
+
         return $data;
     }
 
     private function compactVariantRows(Request $request): void
     {
         $variants = $request->input('variants', []);
+        $variantFiles = $request->file('variants', []);
         if (! is_array($variants)) {
             $request->merge(['variants' => []]);
 
             return;
         }
         $kept = [];
-        foreach ($variants as $row) {
+        foreach ($variants as $i => $row) {
             if (! is_array($row)) {
                 continue;
             }
@@ -296,6 +370,7 @@ class ProductController extends Controller
             }
             $row['size'] = $size;
             $row['color'] = $color;
+            $row['image'] = $variantFiles[$i]['image'] ?? null;
             $kept[] = $row;
         }
         $request->merge(['variants' => array_values($kept)]);

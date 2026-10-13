@@ -46,6 +46,15 @@
                     <input id="sku" name="sku" class="admin-input font-mono text-xs" value="{{ old('sku') }}" />
                 </div>
                 <div>
+                    <label class="admin-label" for="status">Trạng thái sản phẩm</label>
+                    <select id="status" name="status" class="admin-input">
+                        <option value="active" @selected(old('status', 'active') === 'active')>Đang bán</option>
+                        <option value="draft" @selected(old('status') === 'draft')>Bản nháp</option>
+                        <option value="hidden" @selected(old('status') === 'hidden')>Tạm ẩn</option>
+                        <option value="discontinued" @selected(old('status') === 'discontinued')>Ngừng kinh doanh</option>
+                    </select>
+                </div>
+                <div>
                     <label class="admin-label" for="image">Ảnh chính</label>
                     <input id="image" name="image" type="file" accept="image/*" required class="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-orange-800 hover:file:bg-orange-100" />
                 </div>

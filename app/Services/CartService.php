@@ -131,8 +131,8 @@ class CartService
                 $shippingDiscount = $shippingCoupon->discountForAmount($subtotal > 0 ? $baseShipping : 0);
             }
         }
-        $shipping = max(0, $baseShipping - $shippingDiscount);
-        $total = max(0, $subtotal - $discount) + $shipping;
+        $shipping = max(0.0, $baseShipping - $shippingDiscount);
+        $total = max(0.0, $subtotal - $discount) + $shipping;
 
         return [
             'subtotal' => $subtotal,
@@ -145,7 +145,7 @@ class CartService
             'shipping_coupon' => $shippingDiscount > 0 ? $shippingCoupon : null,
             'is_free_shipping' => $isFreeShipping,
             'free_shipping_threshold' => $freeShippingThreshold,
-            'remaining_for_free_shipping' => max(0, $freeShippingThreshold - $subtotal),
+            'remaining_for_free_shipping' => max(0.0, $freeShippingThreshold - $subtotal),
         ];
     }
 }

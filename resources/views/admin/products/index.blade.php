@@ -18,6 +18,7 @@
             @csrf
             <div class="min-w-[16rem] flex-1">
                 <label class="admin-label" for="file">Import Excel theo SKU</label>
+                <p class="mb-2 text-xs text-slate-500">Template hỗ trợ nhiều dòng biến thể, URL ảnh tại cột <code>main_image_url</code> và trạng thái sản phẩm.</p>
                 <input id="file" type="file" name="file" class="admin-input" accept=".xlsx,.xls,.csv" required />
             </div>
             <button class="admin-btn" type="submit">Import</button>
@@ -54,6 +55,16 @@
                     <option value="inactive" @selected(request('visibility') === 'inactive')>Đang ẩn</option>
                 </select>
             </div>
+            <div class="min-w-[11rem]">
+                <label class="admin-label" for="status">Trạng thái</label>
+                <select id="status" name="status" class="admin-input">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="active" @selected(request('status') === 'active')>Đang bán</option>
+                    <option value="draft" @selected(request('status') === 'draft')>Bản nháp</option>
+                    <option value="hidden" @selected(request('status') === 'hidden')>Tạm ẩn</option>
+                    <option value="discontinued" @selected(request('status') === 'discontinued')>Ngừng kinh doanh</option>
+                </select>
+            </div>
             <label class="flex h-10 items-center gap-2 text-sm font-medium text-slate-700">
                 <input type="checkbox" name="sale" value="1" class="rounded border-slate-300 text-orange-600" @checked(request()->boolean('sale'))>
                 Đang sale
@@ -62,10 +73,43 @@
             <a href="{{ route('admin.products.index') }}" class="admin-link text-sm">Đặt lại</a>
         </form>
 
+        <form method="post" action="{{ route('admin.products.bulk') }}" id="bulk-product-form" class="admin-card mb-6 space-y-4 border-blue-100 bg-blue-50/30">
+            @csrf
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div><h2 class="text-sm font-bold text-slate-800">Thao tác hàng loạt</h2><p class="mt-1 text-xs text-slate-500">Chọn sản phẩm rồi áp dụng một thay đổi cho tất cả.</p></div>
+                <span id="selected-product-count" class="text-xs font-semibold text-blue-700">0 sản phẩm được chọn</span>
+            </div>
+            <div class="flex flex-wrap items-end gap-3">
+                <label class="admin-label flex items-center gap-2"><input type="checkbox" id="select-all-products" class="rounded border-slate-300 text-blue-600"> Chọn tất cả trang này</label>
+                <select name="action" id="bulk-action" class="admin-input w-auto min-w-52" required>
+                    <option value="">Chọn thao tác</option>
+                    <option value="activate">Bật bán</option>
+                    <option value="deactivate">Ngừng kinh doanh</option>
+                    <option value="category">Đổi danh mục</option>
+                    <option value="price">Cập nhật giá</option>
+                    <option value="price_increase_percent">Tăng giá theo %</option>
+                    <option value="price_decrease_percent">Giảm giá theo %</option>
+                    <option value="stock">Cập nhật tồn kho</option>
+                    <option value="stock_increase">Tăng tồn kho</option>
+                    <option value="stock_decrease">Giảm tồn kho</option>
+                </select>
+                <select name="category_id" id="bulk-category" class="admin-input hidden w-auto min-w-52">
+                    <option value="">Chọn danh mục mới</option>
+                    @foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->parent_id ? '— ' : '' }}{{ $category->name }}</option>@endforeach
+                </select>
+                <input type="number" name="price" id="bulk-price" min="0" step="0.01" placeholder="Giá mới" class="admin-input hidden w-36" />
+                <input type="number" name="stock" id="bulk-stock" min="0" max="100000" placeholder="Tồn kho mới" class="admin-input hidden w-36" />
+                <input type="number" name="percent" id="bulk-percent" min="0" max="1000" step="0.01" placeholder="Phần trăm" class="admin-input hidden w-36" />
+                <input type="number" name="quantity" id="bulk-quantity" min="0" max="100000" placeholder="Số lượng thay đổi" class="admin-input hidden w-40" />
+                <button type="submit" class="admin-btn disabled:cursor-not-allowed disabled:opacity-50" disabled id="bulk-submit">Áp dụng</button>
+            </div>
+        </form>
+
         <div class="admin-table-wrap overflow-x-auto">
             <table class="admin-table">
                 <thead>
                     <tr>
+                        <th class="w-10"><span class="sr-only">Chọn</span></th>
                         <th class="w-20">Ảnh</th>
                         <th>Sản phẩm</th>
                         <th>Danh mục</th>
@@ -78,6 +122,7 @@
                 <tbody>
                     @foreach($products as $p)
                         <tr>
+                            <td><input type="checkbox" name="product_ids[]" value="{{ $p->id }}" form="bulk-product-form" class="product-checkbox rounded border-slate-300 text-blue-600"></td>
                             <td><img src="{{ $p->mainImageUrl() }}" alt="" class="h-12 w-10 border border-slate-200 object-cover" /></td>
                             <td>
                                 <a href="{{ route('products.show', $p->slug) }}" class="font-semibold text-slate-900 hover:text-orange-600" target="_blank" rel="noopener">{{ $p->name }}</a>
@@ -98,11 +143,12 @@
                                     'text-emerald-700' => (int) $p->stock_total > config('shop.low_stock_threshold'),
                                 ])>{{ (int) $p->stock_total }}</span>
                             </td>
-                            <td><span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $p->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">{{ $p->is_active ? 'Đang bán' : 'Đang ẩn' }}</span></td>
+                            @php $status = $p->status ?? ($p->is_active ? 'active' : 'discontinued'); @endphp
+                            <td><span class="rounded-full px-2.5 py-1 text-xs font-medium {{ match($status) { 'active' => 'bg-emerald-100 text-emerald-800', 'draft' => 'bg-violet-100 text-violet-800', 'hidden' => 'bg-amber-100 text-amber-800', default => 'bg-slate-100 text-slate-600' } }}">{{ match($status) { 'active' => 'Đang bán', 'draft' => 'Bản nháp', 'hidden' => 'Tạm ẩn', default => 'Ngừng kinh doanh' } }}</span></td>
                             <td class="whitespace-nowrap text-right">
                                 <a class="admin-link" href="{{ route('admin.products.edit', $p) }}">Sửa</a>
-                                <form class="inline" method="post" action="{{ route('admin.products.destroy', $p) }}" onsubmit="return confirm('Xóa sản phẩm này?')">@csrf @method('DELETE')
-                                    <button type="submit" class="admin-link-danger">Xóa</button>
+                                <form class="inline" method="post" action="{{ route('admin.products.destroy', $p) }}" onsubmit="return confirm('Chuyển sản phẩm này sang Ngừng kinh doanh?')">@csrf @method('DELETE')
+                                    <button type="submit" class="admin-link-danger">{{ $p->is_active ? 'Ngừng bán' : 'Đã ngừng' }}</button>
                                 </form>
                             </td>
                         </tr>
@@ -112,4 +158,20 @@
         </div>
         <div class="mt-6">{{ $products->links() }}</div>
     </div>
+    <script>
+        (() => {
+            const form = document.getElementById('bulk-product-form');
+            const action = document.getElementById('bulk-action');
+            const all = document.getElementById('select-all-products');
+            const boxes = [...document.querySelectorAll('.product-checkbox')];
+            const count = document.getElementById('selected-product-count');
+            const submit = document.getElementById('bulk-submit');
+            const fields = { category: document.getElementById('bulk-category'), price: document.getElementById('bulk-price'), stock: document.getElementById('bulk-stock'), percent: document.getElementById('bulk-percent'), quantity: document.getElementById('bulk-quantity') };
+            const visibleFields = { category: ['category'], price: ['price'], stock: ['stock'], price_increase_percent: ['percent'], price_decrease_percent: ['percent'], stock_increase: ['quantity'], stock_decrease: ['quantity'] };
+            const sync = () => { const selected = boxes.filter(box => box.checked).length; count.textContent = `${selected} sản phẩm được chọn`; submit.disabled = selected === 0 || !action.value; const visible = visibleFields[action.value] || []; Object.entries(fields).forEach(([key, field]) => field.classList.toggle('hidden', !visible.includes(key))); };
+            all.addEventListener('change', () => { boxes.forEach(box => { box.checked = all.checked; }); sync(); });
+            boxes.forEach(box => box.addEventListener('change', sync)); action.addEventListener('change', sync); sync();
+            form.addEventListener('submit', event => { if (!boxes.some(box => box.checked)) { event.preventDefault(); return; } if (['deactivate', 'delete'].includes(action.value) && !confirm('Chuyển các sản phẩm đã chọn sang Ngừng kinh doanh?')) event.preventDefault(); });
+        })();
+    </script>
 @endsection

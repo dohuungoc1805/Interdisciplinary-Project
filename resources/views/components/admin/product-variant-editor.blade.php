@@ -5,6 +5,8 @@
         ->map(fn ($variant) => [
             'size' => $variant['size'] ?? '',
             'color' => $variant['color'] ?? '',
+            'image_path' => $variant['image_path'] ?? '',
+            'image_url' => $variant['image_url'] ?? '',
             'stock' => $variant['stock'] ?? 0,
             'price' => $variant['price'] ?? '',
             'sku' => $variant['sku'] ?? '',
@@ -22,7 +24,7 @@
     x-data='{
         variants: @json($rows),
         addVariant() {
-            this.variants.push({ size: "", color: "", stock: 0, price: "", sku: "" });
+            this.variants.push({ size: "", color: "", stock: 0, price: "", sku: "", image_path: "", image_url: "" });
         },
         removeVariant(index) {
             if (this.variants.length > 1) this.variants.splice(index, 1);
@@ -52,6 +54,9 @@
                     <label class="block text-xs font-medium text-slate-600">Giá riêng<input class="admin-input mt-1" x-model="variant.price" x-bind:name="'variants[' + index + '][price]'" type="number" min="0" step="0.01" placeholder="Dùng giá chung" /></label>
                 </div>
                 <label class="mt-3 block text-xs font-medium text-slate-600">SKU biến thể <span class="font-normal text-slate-400">(tùy chọn)</span><input class="admin-input mt-1 font-mono text-xs" x-model.trim="variant.sku" x-bind:name="'variants[' + index + '][sku]'" placeholder="VD: AO-HOODIE-M-DEN" /></label>
+                <input type="hidden" x-model="variant.image_path" x-bind:name="'variants[' + index + '][image_path]'" />
+                <label class="mt-3 block text-xs font-medium text-slate-600">Ảnh cho màu này <span class="font-normal text-slate-400">(tùy chọn)</span><input class="admin-input mt-1 text-xs" x-bind:name="'variants[' + index + '][image]'" type="file" accept="image/*" /></label>
+                <template x-if="variant.image_url"><img x-bind:src="variant.image_url" alt="Ảnh biến thể" class="mt-2 h-16 w-14 rounded-md border border-slate-200 object-cover" /></template>
             </fieldset>
         </template>
     </div>

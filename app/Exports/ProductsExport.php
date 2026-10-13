@@ -16,12 +16,14 @@ class ProductsExport implements FromCollection, WithHeadings
             'name',
             'category_id',
             'description',
+            'main_image_url',
             'price',
             'compare_price',
             'stock',
             'variant_size',
             'variant_color',
             'is_active',
+            'status',
         ];
     }
 
@@ -39,12 +41,14 @@ class ProductsExport implements FromCollection, WithHeadings
                     'name' => $product->name,
                     'category_id' => $product->category_id,
                     'description' => $product->description,
+                    'main_image_url' => $product->main_image,
                     'price' => $product->price,
                     'compare_price' => $product->compare_price,
                     'stock' => $variant?->stock ?? 0,
                     'variant_size' => $variant?->size ?? 'Freesize',
                     'variant_color' => $variant?->color ?? 'Mac dinh',
                     'is_active' => $product->is_active ? 1 : 0,
+                    'status' => $product->status,
                 ];
             });
     }

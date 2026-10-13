@@ -11,6 +11,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductVariant;
+use App\Models\InventoryMovement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -105,6 +106,15 @@ class OrderService
                     'line_total' => $lineTotal,
                 ]);
                 $v->decrement('stock', (int) $line->quantity);
+                InventoryMovement::query()->create([
+                    'product_variant_id' => $v->id,
+                    'type' => 'out',
+                    'quantity' => (int) $line->quantity,
+                    'unit_cost' => $v->avg_cost,
+                    'reference_type' => 'order',
+                    'reference_id' => $order->id,
+                    'moved_at' => now(),
+                ]);
             }
             $cart->items()->delete();
             $cart->update(['applied_coupon_code' => null, 'applied_shipping_coupon_code' => null]);
@@ -181,6 +191,15 @@ class OrderService
                 if ($oid->product_variant_id) {
                     \App\Models\ProductVariant::query()->whereKey($oid->product_variant_id)
                         ->increment('stock', $oid->quantity);
+                    InventoryMovement::query()->create([
+                        'product_variant_id' => $oid->product_variant_id,
+                        'type' => 'return',
+                        'quantity' => (int) $oid->quantity,
+                        'unit_cost' => $oid->variant?->avg_cost,
+                        'reference_type' => 'order_cancel',
+                        'reference_id' => $order->id,
+                        'moved_at' => now(),
+                    ]);
                 }
             }
             if ($order->coupon_id) {

@@ -94,6 +94,15 @@ class ProductsImport implements ToCollection
             }
 
             $isActive = $data['is_active'] ?? '1';
+            $status = trim((string) ($data['status'] ?? ''));
+            if (! in_array($status, ['draft', 'active', 'hidden', 'discontinued'], true)) {
+                $status = $this->truthy($isActive) ? 'active' : 'hidden';
+            }
+            $imageUrl = trim((string) ($data['main_image_url'] ?? $data['image_url'] ?? ''));
+            if ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                $this->errors[] = "Dòng {$rowNumber}: main_image_url không hợp lệ";
+                continue;
+            }
             $payload = [
                 'name' => $name,
                 'slug' => Str::slug($name).'-'.Str::lower($sku),
@@ -102,7 +111,11 @@ class ProductsImport implements ToCollection
                 'price' => (float) $price,
                 'compare_price' => ($data['compare_price'] ?? null) !== null && $data['compare_price'] !== '' ? (float) $data['compare_price'] : null,
                 'is_active' => $this->truthy($isActive),
+                'status' => $status,
             ];
+            if ($imageUrl !== '') {
+                $payload['main_image'] = $imageUrl;
+            }
 
             DB::transaction(function () use ($sku, $payload, $stockValue, $variantSize, $variantColor, $variantSku, $variantPrice) {
                 $product = Product::query()->where('sku', $sku)->first();
@@ -114,12 +127,14 @@ class ProductsImport implements ToCollection
                     $this->created++;
                 }
 
-                if ($stockValue !== null || ! $product->variants()->exists()) {
-                    $variant = $product->variants()
-                        ->where('size', $variantSize)
-                        ->where('color', $variantColor)
-                        ->first()
-                        ?? $product->variants()->orderBy('id')->first();
+                $variant = $product->variants()
+                    ->where('size', $variantSize)
+                    ->where('color', $variantColor)
+                    ->first();
+                if ($stockValue !== null || ! $variant) {
+                    if ($variantSku === $sku.'-1' && $product->variants()->exists()) {
+                        $variantSku = $sku.'-'.Str::upper(Str::slug($variantSize.'-'.$variantColor));
+                    }
 
                     $variantPayload = [
                         'size' => $variantSize,
@@ -152,6 +167,7 @@ class ProductsImport implements ToCollection
             'variant color', 'color', 'mau', 'màu' => 'variant_color',
             'variant sku' => 'variant_sku',
             'variant price' => 'variant_price',
+            'main image url', 'image url', 'anh', 'ảnh', 'anh_chinh', 'ảnh chính' => 'main_image_url',
             default => $key,
         };
     }

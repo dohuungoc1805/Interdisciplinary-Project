@@ -27,6 +27,9 @@
                 <x-admin.nav-link :href="route('admin.products.index')" :active="request()->routeIs('admin.products.*')">
                     <span class="text-base leading-none" aria-hidden="true">🏷️</span> Sản phẩm
                 </x-admin.nav-link>
+                <x-admin.nav-link :href="route('admin.products.inventory-movements')" :active="request()->routeIs('admin.products.inventory-movements')">
+                    <span class="text-base leading-none" aria-hidden="true">↕️</span> Lịch sử tồn kho
+                </x-admin.nav-link>
                 <x-admin.nav-link :href="route('admin.orders.index')" :active="request()->routeIs('admin.orders.index') || request()->routeIs('admin.orders.show') || request()->routeIs('admin.orders.update') || request()->routeIs('admin.orders.bulk')">
                     <span class="text-base leading-none" aria-hidden="true">📦</span> Đơn hàng
                 </x-admin.nav-link>

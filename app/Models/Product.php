@@ -24,6 +24,7 @@ class Product extends Model
         'is_on_sale',
         'is_new',
         'is_active',
+        'status',
         'review_count',
         'average_rating',
     ];

@@ -9,6 +9,55 @@ use Illuminate\Support\Facades\DB;
 
 class InventoryService
 {
+    public function setStock(ProductVariant $variant, int $targetStock, string $referenceType = 'manual_adjustment', ?int $referenceId = null): void
+    {
+        DB::transaction(function () use ($variant, $targetStock, $referenceType, $referenceId) {
+            $lockedVariant = ProductVariant::query()->lockForUpdate()->findOrFail($variant->id);
+            $currentStock = (int) $lockedVariant->stock;
+            $delta = $targetStock - $currentStock;
+            if ($delta === 0) {
+                return;
+            }
+
+            $lockedVariant->update(['stock' => $targetStock]);
+            InventoryMovement::query()->create([
+                'product_variant_id' => $lockedVariant->id,
+                'type' => $delta > 0 ? 'in' : 'out',
+                'quantity' => abs($delta),
+                'unit_cost' => $lockedVariant->avg_cost,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'moved_at' => now(),
+            ]);
+        });
+    }
+
+    public function recordOut(ProductVariant $variant, int $quantity, string $referenceType, int $referenceId): void
+    {
+        InventoryMovement::query()->create([
+            'product_variant_id' => $variant->id,
+            'type' => 'out',
+            'quantity' => $quantity,
+            'unit_cost' => $variant->avg_cost,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'moved_at' => now(),
+        ]);
+    }
+
+    public function recordReturn(ProductVariant $variant, int $quantity, string $referenceType, int $referenceId): void
+    {
+        InventoryMovement::query()->create([
+            'product_variant_id' => $variant->id,
+            'type' => 'return',
+            'quantity' => $quantity,
+            'unit_cost' => $variant->avg_cost,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'moved_at' => now(),
+        ]);
+    }
+
     public function receive(array $data): PurchaseReceipt
     {
         return DB::transaction(function () use ($data) {
