@@ -15,6 +15,9 @@ class ChatRequest extends FormRequest
     {
         return [
             'message' => ['required', 'string', 'min:1', 'max:2000'],
+            'history' => ['nullable', 'array', 'max:10'],
+            'history.*.role' => ['required', 'in:user,assistant'],
+            'history.*.message' => ['required', 'string', 'max:2000'],
         ];
     }
 

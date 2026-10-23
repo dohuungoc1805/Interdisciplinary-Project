@@ -29,7 +29,7 @@
         </div>
 
         <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
-            <div class="admin-card p-5"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-bold text-slate-800">Doanh thu theo ngày</h2><p class="mt-1 text-xs text-slate-500">Đơn hoàn thành · {{ $periods[$period] }}</p></div><span class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $periods[$period] }}</span></div><div id="revenue-chart-wrap" class="relative h-[340px] w-full overflow-visible lg:h-[390px]"><svg id="revenue-chart" viewBox="0 0 900 300" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Biểu đồ doanh thu theo thời gian"><line x1="48" y1="20" x2="48" y2="255" stroke="#e2e8f0"/><line x1="48" y1="255" x2="880" y2="255" stroke="#e2e8f0"/><polyline id="revenue-line" fill="none" stroke="#2878f0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><g id="revenue-points"></g><g id="revenue-labels" fill="#64748b" font-size="11" text-anchor="middle"></g></svg><div id="revenue-tooltip" class="pointer-events-none absolute z-10 hidden -translate-x-1/2 -translate-y-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-lg"><div id="revenue-tooltip-date"></div><div id="revenue-tooltip-value" class="mt-0.5 text-blue-200"></div></div></div></div>
+            <div class="admin-card p-5"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-bold text-slate-800">Doanh thu theo ngày</h2><p class="mt-1 text-xs text-slate-500">Đơn hoàn thành · {{ $periods[$period] }}</p></div><span class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $periods[$period] }}</span></div><div id="revenue-chart-wrap" class="relative h-[340px] w-full overflow-visible lg:h-[390px]"><svg id="revenue-chart" viewBox="0 0 900 300" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Biểu đồ doanh thu theo thời gian"><g id="revenue-grid"></g><line x1="48" y1="20" x2="48" y2="255" stroke="#e2e8f0"/><g id="revenue-bars"></g><g id="revenue-y-labels" fill="#64748b" font-size="9" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-weight="500" text-anchor="end"></g><g id="revenue-labels" fill="#64748b" font-size="8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-weight="700" text-anchor="middle"></g></svg><div id="revenue-tooltip" class="revenue-tooltip pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-lg" style="opacity: 0"><div id="revenue-tooltip-date"></div><div id="revenue-tooltip-value" class="mt-0.5 text-rose-200"></div></div></div></div>
             <div class="admin-card p-5"><div class="mb-4"><h2 class="text-sm font-bold text-slate-800">Đơn hàng theo trạng thái</h2><p class="mt-1 text-xs text-slate-500">{{ $periods[$period] }} · {{ $ordersTotal }} tổng đơn</p></div><div class="flex items-center gap-5"><div class="relative grid h-44 w-44 shrink-0 place-items-center rounded-full" style="background: conic-gradient(#fb7185 0 {{ $cancelledEnd }}%, #34d399 {{ $cancelledEnd }}% {{ $completedEnd }}%, #fbbf24 {{ $completedEnd }}% 100%);"><div class="grid h-28 w-28 place-items-center rounded-full bg-white text-center"><strong class="text-2xl text-slate-800">{{ $ordersTotal }}</strong><span class="text-[10px] text-slate-500">Tổng đơn hàng</span></div></div><div class="min-w-0 flex-1 space-y-3 text-xs">@foreach(\App\Enums\OrderStatus::cases() as $status) @php $count = (int) ($ordersByStatus[$status->value] ?? 0); @endphp <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 shrink-0 rounded-full {{ $statusColors[$status->value] ?? 'bg-slate-300' }}"></span><span class="min-w-0 flex-1 truncate text-slate-600">{{ $status->label() }}</span><strong class="text-slate-800">{{ $count }}</strong><span class="w-8 text-right text-slate-400">{{ round($count / $ordersTotal * 100) }}%</span></div>@endforeach</div></div></div>
         </div>
 
@@ -44,13 +44,95 @@
 
     <script>
         (() => {
-            const chart = @json($chart), line = document.getElementById('revenue-line'), pointsGroup = document.getElementById('revenue-points'), labelsGroup = document.getElementById('revenue-labels'), chartWrap = document.getElementById('revenue-chart-wrap'), tooltip = document.getElementById('revenue-tooltip'), tooltipDate = document.getElementById('revenue-tooltip-date'), tooltipValue = document.getElementById('revenue-tooltip-value');
-            if (!line || !chart.values.length) return;
-            const width = 900, height = 300, left = 48, right = 20, top = 20, bottom = 45, max = Math.max(...chart.values, 1), step = chart.values.length > 1 ? (width - left - right) / (chart.values.length - 1) : 0;
-            const coords = chart.values.map((value, index) => [left + index * step, top + (1 - value / max) * (height - top - bottom)]);
-            line.setAttribute('points', coords.map(([x, y]) => `${x},${y}`).join(' '));
+            const chart = @json($chart), barsGroup = document.getElementById('revenue-bars'), gridGroup = document.getElementById('revenue-grid'), yLabelsGroup = document.getElementById('revenue-y-labels'), labelsGroup = document.getElementById('revenue-labels'), chartWrap = document.getElementById('revenue-chart-wrap'), tooltip = document.getElementById('revenue-tooltip'), tooltipDate = document.getElementById('revenue-tooltip-date'), tooltipValue = document.getElementById('revenue-tooltip-value');
+            if (!barsGroup || !chart.values.length) return;
+            const width = 900, height = 300, left = 48, right = 20, top = 20, bottom = 45, baseline = height - bottom;
+            const niceNum = (value, round) => {
+                const exponent = Math.floor(Math.log10(Math.max(value, 1)));
+                const fraction = value / Math.pow(10, exponent);
+                const niceFraction = round
+                    ? (fraction < 1.5 ? 1 : fraction < 3 ? 2 : fraction < 7 ? 5 : 10)
+                    : (fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10);
+                return niceFraction * Math.pow(10, exponent);
+            };
+            const niceScale = (maxValue, maxTicks = 4) => {
+                const range = niceNum(maxValue, false);
+                const step = niceNum(range / (maxTicks - 1), true);
+                return { step, niceMax: Math.ceil(maxValue / step) * step };
+            };
+            const scale = niceScale(Math.max(...chart.values, 1));
+            const tickCount = Math.max(1, Math.ceil(scale.niceMax / scale.step));
+            const scaleMax = scale.step * tickCount;
+            const formatAxisValue = (value) => {
+                if (value === 0) return '0 ₫';
+                if (value >= 1000000) {
+                    const millions = (value / 1000000).toFixed(1).replace('.', ',').replace(',0', '');
+                    return `${millions}tr`;
+                }
+                return `${new Intl.NumberFormat('vi-VN').format(value)} ₫`;
+            };
+            const step = (width - left - right) / chart.values.length;
+            const barWidth = Math.max(8, Math.min(30, step * 0.58));
+            for (let tick = 0; tick <= tickCount; tick += 1) {
+                const y = baseline - (tick / tickCount) * (baseline - top);
+                const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                gridLine.setAttribute('x1', left);
+                gridLine.setAttribute('x2', width - right);
+                gridLine.setAttribute('y1', y);
+                gridLine.setAttribute('y2', y);
+                gridLine.setAttribute('stroke', '#e2e8f0');
+                gridGroup.appendChild(gridLine);
+                const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                yLabel.setAttribute('x', left - 7);
+                yLabel.setAttribute('y', y + 3);
+                yLabel.textContent = formatAxisValue(scale.step * tick);
+                yLabelsGroup.appendChild(yLabel);
+            }
             const showEvery = Math.max(1, Math.ceil(chart.labels.length / 7));
-            coords.forEach(([x, y], index) => { const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', '5'); circle.setAttribute('fill', '#2878f0'); circle.setAttribute('class', 'cursor-pointer'); circle.addEventListener('mouseenter', () => { const svgRect = document.getElementById('revenue-chart').getBoundingClientRect(), wrapRect = chartWrap.getBoundingClientRect(); tooltip.style.left = `${(x / width) * svgRect.width + svgRect.left - wrapRect.left}px`; tooltip.style.top = `${(y / height) * svgRect.height + svgRect.top - wrapRect.top - 10}px`; tooltipDate.textContent = chart.labels[index]; tooltipValue.textContent = `${new Intl.NumberFormat('vi-VN').format(chart.values[index])} ₫`; tooltip.classList.remove('hidden'); circle.setAttribute('r', '8'); }); circle.addEventListener('mouseleave', () => { tooltip.classList.add('hidden'); circle.setAttribute('r', '5'); }); pointsGroup.appendChild(circle); if (index % showEvery === 0 || index === coords.length - 1) { const label = document.createElementNS('http://www.w3.org/2000/svg', 'text'); label.setAttribute('x', x); label.setAttribute('y', height - 15); label.textContent = chart.labels[index]; labelsGroup.appendChild(label); } });
+            chart.values.forEach((value, index) => {
+                const x = left + index * step + (step - barWidth) / 2;
+                const barHeight = value > 0 ? Math.max(4, (value / scaleMax) * (baseline - top)) : 0;
+                const y = baseline - barHeight;
+                const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bar.setAttribute('x', x);
+                bar.setAttribute('y', y);
+                bar.setAttribute('width', barWidth);
+                bar.setAttribute('height', '0');
+                bar.setAttribute('data-target-height', barHeight);
+                bar.setAttribute('rx', '2');
+                bar.setAttribute('fill', '#e94560');
+                bar.setAttribute('class', 'revenue-bar cursor-pointer');
+                bar.addEventListener('mouseenter', () => {
+                    const svgRect = document.getElementById('revenue-chart').getBoundingClientRect(), wrapRect = chartWrap.getBoundingClientRect();
+                    tooltip.style.left = `${((x + barWidth / 2) / width) * svgRect.width + svgRect.left - wrapRect.left}px`;
+                    tooltip.style.top = `${(y / height) * svgRect.height + svgRect.top - wrapRect.top - 10}px`;
+                    tooltipDate.textContent = chart.labels[index];
+                    tooltipValue.textContent = `${new Intl.NumberFormat('vi-VN').format(chart.values[index])} ₫`;
+                    tooltip.style.opacity = '1';
+                    bar.setAttribute('opacity', '0.75');
+                });
+                bar.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; bar.removeAttribute('opacity'); });
+                barsGroup.appendChild(bar);
+                requestAnimationFrame(() => {
+                    const duration = 400, startedAt = performance.now();
+                    const animateBar = (now) => {
+                        const progress = Math.min(1, (now - startedAt) / duration);
+                        const eased = 1 - Math.pow(1 - progress, 4);
+                        const currentHeight = barHeight * eased;
+                        bar.setAttribute('y', baseline - currentHeight);
+                        bar.setAttribute('height', currentHeight);
+                        if (progress < 1) requestAnimationFrame(animateBar);
+                    };
+                    requestAnimationFrame(animateBar);
+                });
+                if (index % showEvery === 0 || index === chart.labels.length - 1) {
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', x + barWidth / 2);
+                    label.setAttribute('y', height - 15);
+                    label.textContent = chart.labels[index];
+                    labelsGroup.appendChild(label);
+                }
+            });
         })();
     </script>
 @endsection

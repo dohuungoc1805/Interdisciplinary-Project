@@ -14,7 +14,7 @@
         <x-shop-brand-logo />
 
         <nav
-            class="order-last flex w-full basis-full flex-col gap-3 pt-2 sm:order-none sm:flex sm:w-auto sm:basis-auto sm:flex-row sm:items-center sm:gap-6 sm:pt-0"
+            class="order-last flex w-full basis-full flex-col gap-3 pt-2 sm:order-none sm:flex sm:w-auto sm:basis-auto sm:flex-row sm:items-center sm:gap-7 sm:pt-0"
             :class="{ 'hidden sm:flex': !mobileNav, 'flex sm:flex': mobileNav }"
             id="shop-main-nav"
         >
@@ -29,7 +29,7 @@
             <a href="{{ route('home') }}#nd-newsletter" class="nd-nav-link">Ưu đãi</a>
         </nav>
 
-        <div class="flex items-center gap-1 sm:gap-2">
+        <div class="flex items-center gap-2 sm:gap-3">
             <details id="shop-search-details" class="group relative z-[50]">
                 <summary
                     class="nd-icon-btn flex cursor-pointer list-none items-center justify-center [&::-webkit-details-marker]:hidden"

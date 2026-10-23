@@ -11,6 +11,7 @@ use App\Models\Review;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
@@ -29,6 +30,7 @@ class ReviewController extends Controller
             ],
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:2000',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
         $order = Order::query()->whereKey($data['order_id'])->firstOrFail();
         if (! $order->items()->where('product_id', $product->id)->exists()) {
@@ -43,6 +45,7 @@ class ReviewController extends Controller
             'order_id' => $order->id,
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
+            'image_path' => $request->hasFile('image') ? $request->file('image')->store('reviews', 'public') : null,
             'is_approved' => false,
         ]);
         $adminUrl = URL::route('admin.reviews-moderation.index');
@@ -63,14 +66,23 @@ class ReviewController extends Controller
         $data = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:2000',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         $wasApproved = $review->is_approved;
+        $oldImagePath = $review->image_path;
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('reviews', 'public')
+            : $oldImagePath;
         $review->update([
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
+            'image_path' => $imagePath,
             'is_approved' => false,
         ]);
+        if ($request->hasFile('image') && $oldImagePath && ! preg_match('#^https?://#i', (string) $oldImagePath)) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
         $review->product->recalculateReviewStats();
 
         if ($wasApproved) {

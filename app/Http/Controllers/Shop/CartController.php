@@ -52,10 +52,10 @@ class CartController extends Controller
         }
         $this->cartService->addLine($cart, $variant, $qty);
 
-        return back()->with('status', 'Added to cart.');
+        return back()->with('status', 'Đã thêm sản phẩm vào giỏ hàng thành công.');
     }
 
-    public function update(Request $request, CartItem $item): RedirectResponse
+    public function update(Request $request, CartItem $item): RedirectResponse|JsonResponse
     {
         $cart = $this->cartService->currentCart();
         if ((int) $item->cart_id !== (int) $cart->id) {
@@ -63,6 +63,28 @@ class CartController extends Controller
         }
         $data = $request->validate(['quantity' => 'required|integer|min:0|max:99']);
         $this->cartService->setQuantity($item, (int) $data['quantity']);
+
+        if ($request->expectsJson()) {
+            $cart = $this->cartService->currentCart()->load('items.variant.product');
+            $totals = $this->cartService->getTotals($cart);
+            $updatedItem = $cart->items->firstWhere('id', $item->id);
+
+            return response()->json([
+                'message' => 'Cart updated.',
+                'item_id' => $item->id,
+                'quantity' => $updatedItem?->quantity,
+                'line_total' => $updatedItem?->variant ? (float) $updatedItem->variant->unitPriceCents() * (int) $updatedItem->quantity : 0,
+                'cart_count' => (int) $cart->items->sum('quantity'),
+                'subtotal' => $totals['subtotal'],
+                'discount' => $totals['discount'],
+                'shipping_discount' => $totals['shipping_discount'],
+                'shipping' => $totals['shipping'],
+                'total' => $totals['total'],
+                'is_free_shipping' => $totals['is_free_shipping'],
+                'remaining_for_free_shipping' => $totals['remaining_for_free_shipping'],
+                'free_shipping_threshold' => $totals['free_shipping_threshold'],
+            ]);
+        }
 
         return back()->with('status', 'Cart updated.');
     }
@@ -134,6 +156,9 @@ class CartController extends Controller
             'shipping_discount' => $totals['shipping_discount'],
             'shipping' => $totals['shipping'],
             'total' => $totals['total'],
+            'is_free_shipping' => $totals['is_free_shipping'],
+            'remaining_for_free_shipping' => $totals['remaining_for_free_shipping'],
+            'free_shipping_threshold' => $totals['free_shipping_threshold'],
         ];
     }
 }

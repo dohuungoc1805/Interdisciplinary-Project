@@ -14,7 +14,14 @@ class CategoryController extends Controller
 {
     public function index(): View
     {
-        $categories = Category::query()->orderBy('position')->orderBy('name')->paginate(20);
+        $categories = Category::query()
+            ->with(['parent', 'products' => fn ($productsQuery) => $productsQuery
+                ->select(['id', 'category_id', 'name', 'sku', 'price', 'is_active'])
+                ->orderBy('name')])
+            ->withCount('products')
+            ->orderBy('position')
+            ->orderBy('name')
+            ->paginate(20);
 
         return view('admin.categories.index', compact('categories'));
     }

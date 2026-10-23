@@ -53,21 +53,13 @@ class HomeController extends Controller
             ->take(10)
             ->get();
 
-        $moreToLove = Product::query()
-            ->active()
-            ->with('category')
-            ->inRandomOrder()
-            ->take(16)
-            ->get();
-
         return view('shop.home', compact(
             'banners',
             'parentCategories',
             'flashDeals',
             'newArrivals',
             'topRated',
-            'featured',
-            'moreToLove'
+            'featured'
         ));
     }
 }

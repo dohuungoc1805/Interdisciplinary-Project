@@ -64,36 +64,6 @@
             }
         }
 
-        // Column 2: different products, fill to 4
-        $homeCol2 = collect();
-        $idsCol2 = collect($usedCol1->all());
-        foreach ($featured as $p) {
-            if ($homeCol2->count() >= 4) {
-                break;
-            }
-            if (! $idsCol2->contains($p->id)) {
-                $homeCol2->push($p);
-                $idsCol2->push($p->id);
-            }
-        }
-        foreach ($newArrivals as $p) {
-            if ($homeCol2->count() >= 4) {
-                break;
-            }
-            if (! $idsCol2->contains($p->id)) {
-                $homeCol2->push($p);
-                $idsCol2->push($p->id);
-            }
-        }
-        foreach ($moreToLove as $p) {
-            if ($homeCol2->count() >= 4) {
-                break;
-            }
-            if (! $idsCol2->contains($p->id)) {
-                $homeCol2->push($p);
-                $idsCol2->push($p->id);
-            }
-        }
     @endphp
 
     {{-- Hero (full width) --}}
@@ -146,9 +116,11 @@
                 </div>
             @endforeach
             <div class="pointer-events-none absolute inset-0 z-[2] flex flex-col justify-center nd-container py-16 text-white">
-                <p class="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--gold)] sm:text-sm" x-text="slides[i].sub"></p>
-                <h1 class="shop-heading mb-4 max-w-xl text-4xl font-bold leading-[1.12] text-white sm:text-5xl lg:max-w-2xl lg:text-6xl" x-text="slides[i].title"></h1>
-                <p class="mb-8 max-w-md text-sm text-white/85 sm:text-base">Khám phá bộ sưu tập với thiết kế tinh tế — chất liệu được chọn lọc cho phong cách hằng ngày.</p>
+                <div class="max-w-lg drop-shadow-[0_4px_18px_rgba(0,0,0,0.35)]">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--gold)] sm:text-sm" x-text="slides[i].sub"></p>
+                    <h1 class="shop-heading mb-4 max-w-xl text-4xl font-bold leading-[1.12] text-white sm:text-5xl lg:text-6xl" x-text="slides[i].title"></h1>
+                    <p class="mb-8 max-w-md text-sm text-white/90 sm:text-base">Khám phá bộ sưu tập với thiết kế tinh tế — chất liệu được chọn lọc cho phong cách hằng ngày.</p>
+                </div>
                 <div class="pointer-events-auto flex flex-wrap gap-3">
                     <a :href="slides[i].link" class="primary-cta">Khám phá ngay</a>
                     <a href="{{ route('products.index') }}" class="secondary-cta--on-dark">Xem cửa hàng</a>
@@ -276,99 +248,17 @@
         </section>
     @endif
 
-    {{-- Featured --}}
-    <section class="nd-section mb-12 sm:mb-16">
+    {{-- Best sellers --}}
+    <section class="nd-section mb-6 sm:mb-10" id="nd-bestsellers">
         <div class="nd-section-header mb-10">
-            <p class="nd-section-sub">Tuyển chọn</p>
-            <h2 class="nd-section-title">Nổi bật tuần này</h2>
-        </div>
-        <div class="nd-product-grid nd-product-grid--dense">
-            @foreach($featured as $p)
-                <x-product-card :product="$p" />
-            @endforeach
-        </div>
-    </section>
-
-    {{-- Two columns: balanced 2×2 grids --}}
-    <div class="mb-12 grid gap-10 sm:mb-16 lg:grid-cols-2 lg:gap-12" id="nd-bestsellers">
-        <section>
-            <div class="mb-8 text-left">
-                <p class="nd-section-sub">Được yêu thích</p>
-                <h2 class="nd-section-title">Bán chạy &amp; đánh giá</h2>
-            </div>
-            <div class="nd-product-grid nd-product-grid--split">
-                @foreach($homeCol1->take(4) as $p)
-                    <x-product-card :product="$p" />
-                @endforeach
-            </div>
-            @if($homeCol1->isEmpty())
-                <p class="text-sm text-[color:var(--text-muted)]">Chưa có sản phẩm để hiển thị.</p>
-            @endif
-        </section>
-        <section>
-            <div class="mb-8 text-left">
-                <p class="nd-section-sub">Gợi ý thêm</p>
-                <h2 class="nd-section-title">Dành cho bạn</h2>
-            </div>
-            <div class="nd-product-grid nd-product-grid--split">
-                @foreach($homeCol2->take(4) as $p)
-                    <x-product-card :product="$p" />
-                @endforeach
-            </div>
-            @if($homeCol2->isEmpty())
-                <p class="text-sm text-[color:var(--text-muted)]">Đang cập nhật sản phẩm gợi ý.</p>
-            @endif
-        </section>
-    </div>
-
-    {{-- More to love --}}
-    <section class="nd-section mb-6 sm:mb-10">
-        <div class="nd-section-header mb-10">
-            <p class="nd-section-sub">Khám phá</p>
-            <h2 class="nd-section-title">Có thể bạn thích</h2>
+            <p class="nd-section-sub">Được yêu thích</p>
+            <h2 class="nd-section-title">Bán chạy &amp; đánh giá tốt</h2>
         </div>
         <div class="nd-product-grid">
-            @foreach($moreToLove as $p)
+            @foreach($homeCol1->take(8) as $p)
                 <x-product-card :product="$p" />
             @endforeach
         </div>
     </section>
 
-    {{-- Contact strip --}}
-    <section class="shop-shell mb-4 p-6 sm:p-8" id="nd-contact">
-        <div class="nd-section-header mb-8">
-            <p class="nd-section-sub">Liên hệ</p>
-            <h2 class="nd-section-title">Kết nối với chúng tôi</h2>
-        </div>
-        <div class="grid gap-6 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <div class="flex gap-3">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f7f9] text-[color:var(--accent)]"><i class="fas fa-map-marker-alt"></i></span>
-                <div>
-                    <strong class="text-[color:var(--primary)]">Địa chỉ</strong>
-                    <p class="mt-1 text-[color:var(--text-muted)]">Giao hàng toàn quốc — xem chi tiết khi thanh toán.</p>
-                </div>
-            </div>
-            <div class="flex gap-3">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f7f9] text-[color:var(--accent)]"><i class="fas fa-phone-alt"></i></span>
-                <div>
-                    <strong class="text-[color:var(--primary)]">Hotline</strong>
-                    <p class="mt-1 text-[color:var(--text-muted)]">{{ config('app.support_phone', '0123 456 789') }}</p>
-                </div>
-            </div>
-            <div class="flex gap-3">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f7f9] text-[color:var(--accent)]"><i class="fas fa-envelope"></i></span>
-                <div>
-                    <strong class="text-[color:var(--primary)]">Email</strong>
-                    <p class="mt-1 text-[color:var(--text-muted)]">{{ config('mail.from.address') ?: 'support@shop' }}</p>
-                </div>
-            </div>
-            <div class="flex gap-3">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f7f9] text-[color:var(--accent)]"><i class="fas fa-clock"></i></span>
-                <div>
-                    <strong class="text-[color:var(--primary)]">Giờ hỗ trợ</strong>
-                    <p class="mt-1 text-[color:var(--text-muted)]">8:00 – 22:00 hằng ngày</p>
-                </div>
-            </div>
-        </div>
-    </section>
 @endsection

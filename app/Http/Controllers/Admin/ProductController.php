@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Imports\ProductsImport;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\InventoryMovement;
 use App\Services\InventoryService;
@@ -125,8 +124,9 @@ class ProductController extends Controller
     public function create(): View
     {
         $categories = Category::query()->orderBy('name')->get();
+        $categoryTypes = $categories->mapWithKeys(fn (Category $category) => [$category->id => $this->categoryType($category)]);
 
-        return view('admin.products.create', compact('categories'));
+        return view('admin.products.create', compact('categories', 'categoryTypes'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -138,9 +138,9 @@ class ProductController extends Controller
         if (count($variants) < 1) {
             return back()->with('error', 'Add at least one variant with size and color.')->withInput();
         }
-        unset($data['variants'], $data['image'], $data['gallery']);
+        unset($data['variants'], $data['image']);
         $product = null;
-        DB::transaction(function () use (&$product, $data, $request, $variants) {
+        DB::transaction(function () use (&$product, $data, $variants) {
             $product = Product::query()->create($data);
             foreach ($variants as $v) {
                 ProductVariant::query()->create([
@@ -153,17 +153,6 @@ class ProductController extends Controller
                     'stock' => (int) $v['stock'],
                 ]);
             }
-            if ($request->hasFile('gallery')) {
-                $pos = 0;
-                foreach ($request->file('gallery') as $file) {
-                    $path = $file->store('products', 'public');
-                    ProductImage::query()->create([
-                        'product_id' => $product->id,
-                        'path' => $path,
-                        'position' => $pos++,
-                    ]);
-                }
-            }
         });
 
         return redirect()->route('admin.products.index')->with('status', 'Đã tạo sản phẩm.');
@@ -173,8 +162,9 @@ class ProductController extends Controller
     {
         $product->load(['images', 'variants']);
         $categories = Category::query()->orderBy('name')->get();
+        $categoryTypes = $categories->mapWithKeys(fn (Category $category) => [$category->id => $this->categoryType($category)]);
 
-        return view('admin.products.edit', compact('product', 'categories'));
+        return view('admin.products.edit', compact('product', 'categories', 'categoryTypes'));
     }
 
     public function update(Request $request, Product $product): RedirectResponse
@@ -189,42 +179,56 @@ class ProductController extends Controller
         if (count($variants) < 1) {
             return back()->with('error', 'Add at least one variant.')->withInput();
         }
-        unset($data['variants'], $data['image'], $data['gallery']);
+        unset($data['variants'], $data['image']);
         if (! isset($data['main_image'])) {
             unset($data['main_image']);
         }
-        $oldVariantImages = $product->variants()->pluck('image_path')->filter()->values()->all();
-        DB::transaction(function () use ($request, $product, $data, $variants, $oldMainImage) {
+        $existingVariants = $product->variants()->get()->keyBy('id');
+        $submittedVariantIds = collect($variants)->pluck('id')->filter()->map(fn ($id) => (int) $id)->values()->all();
+        $oldVariantImages = $existingVariants->pluck('image_path')->filter()->values()->all();
+        $keptVariantImages = [];
+        DB::transaction(function () use ($product, $data, $variants, $oldMainImage, $existingVariants, $submittedVariantIds, &$keptVariantImages) {
             $product->update($data);
             if (isset($data['main_image']) && $oldMainImage && ! preg_match('#^https?://#i', (string) $oldMainImage)) {
                 Storage::disk('public')->delete($oldMainImage);
             }
-            $product->variants()->delete();
             foreach ($variants as $v) {
-                ProductVariant::query()->create([
+                $variant = ! empty($v['id']) ? $existingVariants->get((int) $v['id']) : null;
+                if (! $variant) {
+                    $variant = new ProductVariant(['product_id' => $product->id]);
+                }
+                $oldVariantImage = $variant->image_path;
+                $variantImage = $oldVariantImage;
+                if (isset($v['image']) && $v['image'] instanceof \Illuminate\Http\UploadedFile) {
+                    $variantImage = $v['image']->store('products/variants', 'public');
+                } elseif (! empty($v['image_path'])) {
+                    $variantImage = $v['image_path'];
+                }
+                if ($variantImage) {
+                    $keptVariantImages[] = $variantImage;
+                }
+                $variant->fill([
                     'product_id' => $product->id,
                     'size' => $v['size'],
                     'color' => $v['color'],
-                    'image_path' => isset($v['image']) && $v['image'] instanceof \Illuminate\Http\UploadedFile ? $v['image']->store('products/variants', 'public') : ($v['image_path'] ?? null),
+                    'image_path' => $variantImage,
                     'sku' => $v['sku'] ?? null,
                     'price' => $v['price'] ?? null,
                     'stock' => (int) $v['stock'],
-                ]);
+                ])->save();
             }
-            if ($request->hasFile('gallery')) {
-                $pos = (int) $product->images()->max('position') + 1;
-                foreach ($request->file('gallery') as $file) {
-                    $path = $file->store('products', 'public');
-                    ProductImage::query()->create([
-                        'product_id' => $product->id,
-                        'path' => $path,
-                        'position' => $pos++,
-                    ]);
+            foreach ($existingVariants as $existingVariant) {
+                if (! in_array((int) $existingVariant->id, $submittedVariantIds, true)) {
+                    // Keep historical variants referenced by inventory/order records, but make them unavailable.
+                    $existingVariant->update(['stock' => 0]);
+                    if ($existingVariant->image_path) {
+                        $keptVariantImages[] = $existingVariant->image_path;
+                    }
                 }
             }
         });
         foreach ($oldVariantImages as $oldVariantImage) {
-            if (! collect($variants)->contains(fn ($variant) => ($variant['image_path'] ?? null) === $oldVariantImage)) {
+            if (! in_array($oldVariantImage, $keptVariantImages, true)) {
                 Storage::disk('public')->delete($oldVariantImage);
             }
         }
@@ -291,13 +295,20 @@ class ProductController extends Controller
 
     private function validateProduct(Request $request, ?int $productId = null, bool $requireImage = false): array
     {
-        $this->compactVariantRows($request);
+        $category = Category::query()->findOrFail((int) $request->input('category_id'));
+        $categoryType = $this->categoryType($category);
+        $this->compactVariantRows($request, $categoryType);
         $this->normalizeProductNumericInputs($request);
 
         $rules = [
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'details' => 'nullable|array',
+            'details.material' => 'nullable|string|max:120',
+            'details.dimensions' => 'nullable|string|max:120',
+            'details.volume' => 'nullable|string|max:80',
+            'details.expiry' => 'nullable|date',
             'price' => 'required|numeric|min:0',
             'compare_price' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:64',
@@ -308,8 +319,8 @@ class ProductController extends Controller
             'is_active' => 'boolean',
             'status' => 'nullable|in:draft,active,hidden,discontinued',
             'image' => ($requireImage ? 'required' : 'nullable').'|image|max:4096',
-            'gallery.*' => 'nullable|image|max:4096',
             'variants' => 'required|array|min:1',
+            'variants.*.id' => 'nullable|integer',
             'variants.*.size' => 'required|string|max:32',
             'variants.*.color' => 'required|string|max:64',
             'variants.*.sku' => 'nullable|string|max:64',
@@ -325,6 +336,7 @@ class ProductController extends Controller
         $data['is_new'] = $request->boolean('is_new');
         $data['status'] = $request->input('status') ?: ($request->boolean('is_active') ? 'active' : 'hidden');
         $data['is_active'] = $data['status'] === 'active';
+        $data['details'] = collect($data['details'] ?? [])->filter(fn ($value) => filled($value))->all();
 
         if (! empty($data['sku']) && Product::query()->where('sku', $data['sku'])->when($productId, fn ($q) => $q->where('id', '!=', $productId))->exists()) {
             throw ValidationException::withMessages(['sku' => 'SKU sản phẩm đã tồn tại.']);
@@ -349,7 +361,7 @@ class ProductController extends Controller
         return $data;
     }
 
-    private function compactVariantRows(Request $request): void
+    private function compactVariantRows(Request $request, string $categoryType = 'apparel'): void
     {
         $variants = $request->input('variants', []);
         $variantFiles = $request->file('variants', []);
@@ -365,6 +377,12 @@ class ProductController extends Controller
             }
             $size = trim((string) ($row['size'] ?? ''));
             $color = trim((string) ($row['color'] ?? ''));
+            if ($categoryType !== 'apparel' && $size === '') {
+                $size = 'Mặc định';
+            }
+            if ($categoryType !== 'apparel' && $color === '') {
+                $color = 'Mặc định';
+            }
             if ($size === '' || $color === '') {
                 continue;
             }
@@ -374,6 +392,18 @@ class ProductController extends Controller
             $kept[] = $row;
         }
         $request->merge(['variants' => array_values($kept)]);
+    }
+
+    private function categoryType(Category $category): string
+    {
+        $name = Str::lower(Str::ascii(collect([$category->name, $category->parent?->name])->filter()->implode(' ')));
+
+        return match (true) {
+            Str::contains($name, ['giay', 'sandal', 'dep']) => 'footwear',
+            Str::contains($name, ['tui', 'balo', 'vi', 'phu kien']) => 'bag',
+            Str::contains($name, ['my pham', 'lam dep', 'son', 'serum', 'kem']) => 'cosmetics',
+            default => 'apparel',
+        };
     }
 
     private function normalizeProductNumericInputs(Request $request): void

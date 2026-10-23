@@ -38,7 +38,9 @@ class GeminiService
             ."5) Only mention colors from available_colors and sizes from available_sizes; never invent variants.\n"
             ."6) If the customer has not provided both height and weight but asks about sizing, ask for both values in cm and kg.\n"
             ."7) If no relevant product exists, say so and ask one follow-up question about style, category, or budget.\n"
-            ."8) Keep the answer concise, natural Vietnamese.\n";
+            ."8) For greetings, thanks, casual conversation, or follow-up questions, reply naturally and briefly; do not force a product list.\n"
+            ."9) Use RECENT_CONVERSATION to understand pronouns and follow-up requests, but do not repeat the whole history.\n"
+            ."10) Keep the answer concise, natural Vietnamese.\n";
 
         $text = $policy;
         if ($systemContext) {
@@ -61,7 +63,11 @@ class GeminiService
             ],
         ];
         try {
-            $res = Http::timeout(30)->withHeaders(['Content-Type' => 'application/json'])->post($url, $payload);
+            $http = Http::timeout(30)->withHeaders(['Content-Type' => 'application/json']);
+            if ($caBundle = config('gemini.ca_bundle')) {
+                $http = $http->withOptions(['verify' => $caBundle]);
+            }
+            $res = $http->post($url, $payload);
             if (! $res->successful()) {
                 Log::warning('Gemini API error', ['body' => $res->body(), 'status' => $res->status()]);
 

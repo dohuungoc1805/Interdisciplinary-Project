@@ -3,6 +3,7 @@
 @section('content')
     @php
         $variantRows = old('variants', $product->variants->map(fn ($variant) => [
+            'id' => $variant->id,
             'size' => $variant->size,
             'color' => $variant->color,
             'sku' => $variant->sku,
@@ -11,6 +12,7 @@
             'image_path' => $variant->image_path,
             'image_url' => $variant->imageUrl(),
         ])->values()->all());
+        $selectedCategoryType = $categoryTypes[(int) old('category_id', $product->category_id)] ?? 'apparel';
     @endphp
     <div class="admin-shell max-w-2xl">
         <div class="admin-page-head">
@@ -31,6 +33,16 @@
                             <option value="{{ $category->id }}" @selected(old('category_id', $product->category_id) == $category->id)>{{ $category->name }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div id="category-details" class="rounded-lg border border-orange-100 bg-orange-50/50 p-4" data-category-types='@json($categoryTypes)'>
+                    <p class="text-sm font-semibold text-slate-900">Thông tin riêng theo ngành hàng</p>
+                    <p class="mt-1 text-xs text-slate-500">Các trường sẽ thay đổi theo danh mục sản phẩm.</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label data-detail-field="material" class="hidden text-xs font-medium text-slate-600">Chất liệu<input name="details[material]" class="admin-input mt-1" value="{{ old('details.material', $product->details['material'] ?? '') }}" /></label>
+                        <label data-detail-field="dimensions" class="hidden text-xs font-medium text-slate-600">Kích thước<input name="details[dimensions]" class="admin-input mt-1" value="{{ old('details.dimensions', $product->details['dimensions'] ?? '') }}" /></label>
+                        <label data-detail-field="volume" class="hidden text-xs font-medium text-slate-600">Dung tích<input name="details[volume]" class="admin-input mt-1" value="{{ old('details.volume', $product->details['volume'] ?? '') }}" /></label>
+                        <label data-detail-field="expiry" class="hidden text-xs font-medium text-slate-600">Hạn sử dụng<input name="details[expiry]" type="date" class="admin-input mt-1" value="{{ old('details.expiry', $product->details['expiry'] ?? '') }}" /></label>
+                    </div>
                 </div>
                 <div>
                     <label class="admin-label" for="name">Tên sản phẩm</label>
@@ -76,10 +88,6 @@
                     </p>
                     <input id="image" name="image" type="file" accept="image/*" class="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-orange-800 hover:file:bg-orange-100" />
                 </div>
-                <div>
-                    <label class="admin-label" for="gallery">Thêm ảnh thư viện</label>
-                    <input id="gallery" name="gallery[]" type="file" accept="image/*" multiple class="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-700 hover:file:bg-slate-200" />
-                </div>
                 <div class="flex flex-wrap gap-x-5 gap-y-2">
                     <label class="flex items-center gap-2 text-slate-700"><input type="checkbox" name="is_featured" value="1" class="rounded border-slate-300 text-orange-600" @checked(old('is_featured', $product->is_featured)) /> Nổi bật (trang chủ)</label>
                     <label class="flex items-center gap-2 text-slate-700"><input type="checkbox" name="is_hot" value="1" class="rounded border-slate-300 text-orange-600" @checked(old('is_hot', $product->is_hot)) /> Hot</label>
@@ -90,9 +98,25 @@
                         <input type="checkbox" name="is_active" value="1" class="rounded border-slate-300 text-orange-600" @checked(! $errors->any() ? $product->is_active : request()->boolean('is_active')) /> Đang bán
                     </label>
                 </div>
-                <x-admin.product-variant-editor :variants="$variantRows" />
+                <x-admin.product-variant-editor :variants="$variantRows" :mode="$selectedCategoryType" />
                 <button class="admin-btn" type="submit">Cập nhật</button>
             </form>
+            <script>
+                (() => {
+                    const box = document.getElementById('category-details');
+                    const category = document.getElementById('category_id');
+                    if (!box || !category) return;
+                    const types = JSON.parse(box.dataset.categoryTypes || '{}');
+                    const variants = document.querySelector('.product-variant-editor');
+                    const sync = () => {
+                        const type = types[category.value] || 'apparel';
+                        if (variants) variants.dataset.mode = type;
+                        box.querySelectorAll('[data-detail-field]').forEach((field) => field.classList.toggle('hidden', !((type === 'bag' && ['material', 'dimensions'].includes(field.dataset.detailField)) || (type === 'cosmetics' && ['volume', 'expiry'].includes(field.dataset.detailField)))));
+                    };
+                    category.addEventListener('change', sync);
+                    sync();
+                })();
+            </script>
         </div>
     </div>
 @endsection

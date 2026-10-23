@@ -1,8 +1,11 @@
 @props(['product'])
+@php
+    $availableStock = $product->relationLoaded('variants') ? (int) $product->variants->sum('stock') : null;
+@endphp
 <div {{ $attributes->merge(['class' => 'group nd-product-card']) }}>
     <div class="relative aspect-[3/4] overflow-hidden bg-[#f7f7f9]">
         <a href="{{ route('products.show', $product->slug) }}" class="absolute inset-0 z-0 block">
-            <img src="{{ $product->mainImageUrl() }}" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]" loading="lazy" />
+            <img src="{{ $product->mainImageUrl() }}" alt="{{ $product->name }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]" loading="lazy" />
         </a>
         @php
             $showSale = $product->is_on_sale || $product->discountPercent();
@@ -15,12 +18,10 @@
                 @else
                     <span class="nd-product-badge nd-product-badge--sale w-fit">SALE</span>
                 @endif
-            @endif
-            @if($product->is_new)
-                <span class="nd-product-badge nd-product-badge--new w-fit">Mới</span>
-            @endif
-            @if($product->is_hot)
+            @elseif($product->is_hot)
                 <span class="nd-product-badge nd-product-badge--hot w-fit">Hot</span>
+            @elseif($product->is_new)
+                <span class="nd-product-badge nd-product-badge--new w-fit">Mới</span>
             @endif
         </div>
         <div class="nd-product-actions">
@@ -33,6 +34,11 @@
             @endauth
             <a href="{{ route('products.show', $product->slug) }}" class="nd-pa-btn" title="Mua hàng"><i class="fas fa-shopping-bag"></i></a>
         </div>
+        @if($availableStock !== null)
+            <span class="absolute bottom-3 left-3 z-[2] rounded-full px-2.5 py-1 text-[0.68rem] font-semibold {{ $availableStock > 0 ? 'bg-white/90 text-emerald-700' : 'bg-red-600 text-white' }}">
+                {{ $availableStock > 0 ? 'Còn '.$availableStock.' sản phẩm' : 'Hết hàng' }}
+            </span>
+        @endif
     </div>
     <a href="{{ route('products.show', $product->slug) }}" class="flex flex-1 flex-col p-4">
         @if($product->category)
@@ -48,5 +54,6 @@
         @if($product->review_count > 0)
             <p class="mt-2 text-xs text-[color:var(--text-muted)]">★ {{ number_format((float) $product->average_rating, 1) }} ({{ $product->review_count }})</p>
         @endif
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] transition group-hover:gap-2">Xem chi tiết <i class="fas fa-arrow-right text-[0.65rem]" aria-hidden="true"></i></span>
     </a>
 </div>

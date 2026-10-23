@@ -15,6 +15,7 @@ class Product extends Model
         'name',
         'slug',
         'description',
+        'details',
         'main_image',
         'price',
         'compare_price',
@@ -41,6 +42,7 @@ class Product extends Model
             'is_active' => 'boolean',
             'review_count' => 'integer',
             'average_rating' => 'decimal:2',
+            'details' => 'array',
         ];
     }
 

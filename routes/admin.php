@@ -46,4 +46,5 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/reviews', [ReviewModerationController::class, 'index'])->name('reviews-moderation.index');
     Route::post('/reviews/{review}/approve', [ReviewModerationController::class, 'approve'])->name('reviews-moderation.approve');
     Route::delete('/reviews/{review}', [ReviewModerationController::class, 'reject'])->name('reviews-moderation.reject');
+    Route::post('/reviews/{review}/reply', [ReviewModerationController::class, 'reply'])->name('reviews-moderation.reply');
 });

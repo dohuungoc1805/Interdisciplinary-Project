@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\ProductSearchService;
 use App\Services\RelatedProductService;
+use App\Services\SizeRecommendationService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,7 @@ class ProductController extends Controller
     public function index(Request $request, ProductSearchService $productSearchService): View
     {
         $q = Product::query()->where('is_active', true)->with(['images', 'category', 'variants']);
+        $selectedCategory = null;
 
         if ($request->filled('category')) {
             $selectedCategory = Category::query()
@@ -95,6 +97,7 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->whereNull('parent_id')
             ->with(['children' => fn ($childrenQuery) => $childrenQuery->where('is_active', true)->orderBy('position')->orderBy('name')])
+            ->withCount(['products as active_products_count' => fn ($productQuery) => $productQuery->where('is_active', true)])
             ->orderBy('position')
             ->orderBy('name')
             ->get();
@@ -102,17 +105,32 @@ class ProductController extends Controller
         $sizes = (clone $activeVariants)->where('size', '!=', '')->distinct()->orderBy('size')->pluck('size');
         $colors = (clone $activeVariants)->where('color', '!=', '')->distinct()->orderBy('color')->pluck('color');
 
-        return view('shop.products.index', compact('products', 'categories', 'sizes', 'colors', 'onlyNew', 'hasFuzzyResults'));
+        return view('shop.products.index', compact('products', 'categories', 'sizes', 'colors', 'onlyNew', 'hasFuzzyResults', 'selectedCategory'));
     }
 
-    public function show(string $slug, RelatedProductService $relatedProductService): View
+    public function show(
+        string $slug,
+        RelatedProductService $relatedProductService,
+        SizeRecommendationService $sizeRecommendationService,
+    ): View
     {
         $product = Product::query()->where('slug', $slug)->where('is_active', true)
-            ->with(['images', 'category', 'variants' => function ($q) {
+            ->with(['images', 'category.parent', 'variants' => function ($q) {
                 $q->orderBy('size');
             }])
             ->firstOrFail();
         $reviews = $product->reviews()->where('is_approved', true)->with('user')->latest()->take(20)->get();
+        $reviewBreakdown = collect(range(5, 1))->mapWithKeys(fn (int $rating) => [
+            $rating => (int) $product->reviews()->where('is_approved', true)->where('rating', $rating)->count(),
+        ])->all();
+        $reviewTotal = array_sum($reviewBreakdown);
+        $reviewStats = [
+            'total' => $reviewTotal,
+            'average' => $reviewTotal > 0
+                ? round((float) $product->reviews()->where('is_approved', true)->avg('rating'), 1)
+                : 0,
+            'breakdown' => $reviewBreakdown,
+        ];
 
         $userReview = null;
         $reviewableOrders = collect();
@@ -128,7 +146,9 @@ class ProductController extends Controller
             }
         }
         $relatedProducts = $relatedProductService->for($product);
+        $categoryNames = collect([$product->category?->name, $product->category?->parent?->name])->filter()->implode(' ');
+        $sizeGuide = $sizeRecommendationService->sizeGuide($categoryNames);
 
-        return view('shop.products.show', compact('product', 'reviews', 'userReview', 'reviewableOrders', 'relatedProducts'));
+        return view('shop.products.show', compact('product', 'reviews', 'reviewStats', 'userReview', 'reviewableOrders', 'relatedProducts', 'sizeGuide'));
     }
 }

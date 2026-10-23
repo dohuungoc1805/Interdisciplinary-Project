@@ -32,6 +32,7 @@ class RelatedProductService
 
         return Product::query()
             ->where('is_active', true)
+            ->whereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0))
             ->whereIn('category_id', $categoryIds)
             ->whereKeyNot($product->id)
             ->with(['images', 'category', 'variants'])

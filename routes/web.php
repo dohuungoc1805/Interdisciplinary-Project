@@ -28,6 +28,8 @@ Route::post('/newsletter', [NewsletterController::class, 'store'])->name('newsle
 Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
 
 Route::post('/chat', [ChatController::class, 'store'])->middleware('throttle:20,1')->name('chat');
+Route::get('/chat/history', [ChatController::class, 'history'])->name('chat.history');
+Route::delete('/chat/history', [ChatController::class, 'clearHistory'])->name('chat.history.clear');
 
 Route::middleware(['auth', 'verified', 'not.blocked'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');

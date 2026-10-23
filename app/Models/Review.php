@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Review extends Model
 {
@@ -13,6 +14,9 @@ class Review extends Model
         'order_id',
         'rating',
         'comment',
+        'image_path',
+        'admin_reply',
+        'admin_replied_at',
         'is_approved',
     ];
 
@@ -21,6 +25,7 @@ class Review extends Model
         return [
             'rating' => 'integer',
             'is_approved' => 'boolean',
+            'admin_replied_at' => 'datetime',
         ];
     }
 
@@ -37,5 +42,17 @@ class Review extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (! $this->image_path) {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $this->image_path)) {
+            return $this->image_path;
+        }
+
+        return Storage::disk('public')->url($this->image_path);
     }
 }

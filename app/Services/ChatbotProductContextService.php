@@ -41,9 +41,25 @@ class ChatbotProductContextService
             ->orderByDesc('average_rating')
             ->orderByDesc('review_count');
 
-        $products = $keywords->isNotEmpty()
-            ? $this->productSearchService->rank($productsQuery->get(), $keywords->implode(' '))->take($limit)
-            : $productsQuery->limit($limit)->get();
+        if ($keywords->isNotEmpty()) {
+            $rankedProducts = $this->productSearchService->rank($productsQuery->get(), $keywords->implode(' '));
+
+            // For multi-word requests, keep products that match the actual phrase strongly.
+            // This prevents a generic word such as "áo" from mixing shirts with hoodies.
+            if ($keywords->count() >= 2 && $rankedProducts->isNotEmpty()) {
+                $topScore = (int) $rankedProducts->first()->getAttribute('search_score');
+                // Keep typo-tolerant two-word matches (often scoring around 45-55),
+                // while filtering products that only match a generic word.
+                $minimumScore = max(45, (int) ceil($topScore * 0.45));
+                $rankedProducts = $rankedProducts
+                    ->filter(fn (Product $product) => (int) $product->getAttribute('search_score') >= $minimumScore)
+                    ->values();
+            }
+
+            $products = $rankedProducts->take($limit);
+        } else {
+            $products = $productsQuery->limit($limit)->get();
+        }
 
         return $products->map(function (Product $product) {
             $inStock = $product->variants->sum('stock') > 0;
@@ -121,12 +137,17 @@ class ChatbotProductContextService
         bool $isSizingRequest = false,
     ): string
     {
+        if ($casualReply = $this->casualReply($message)) {
+            return $casualReply;
+        }
+
         $sizeLine = $sizeRecommendation !== null
             ? sprintf(
-                'Theo chiều cao %.0f cm và cân nặng %.1f kg, size tham khảo của bạn là %s. %s',
+                'Theo chiều cao %.0f cm và cân nặng %.1f kg, size tham khảo của bạn là %s%s. %s',
                 $sizeRecommendation['height_cm'],
                 $sizeRecommendation['weight_kg'],
                 $sizeRecommendation['size'],
+                ! empty($sizeRecommendation['age_note']) ? ' ('.$sizeRecommendation['age_note'].')' : '',
                 $sizeRecommendation['note']
             )
             : null;
@@ -170,6 +191,27 @@ class ChatbotProductContextService
         $lines[] = 'Nếu bạn muốn, mình có thể lọc tiếp theo ngân sách hoặc phong cách cụ thể.';
 
         return implode("\n", $lines);
+    }
+
+    private function casualReply(string $message): ?string
+    {
+        $normalized = trim(Str::lower(Str::ascii($message)));
+        $normalized = preg_replace('/[^a-z0-9\s!?.,]+/', ' ', $normalized) ?? $normalized;
+        $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? $normalized);
+
+        if (preg_match('/^(xin chao|chao|hello|hi|hey|alo|good morning|good evening)[\s!?.,]*$/', $normalized)) {
+            return 'Chào bạn! Mình là trợ lý của QUDENA. Bạn đang muốn tìm sản phẩm, chọn size hay xem ưu đãi nào hôm nay?';
+        }
+
+        if (preg_match('/^(cam on|thanks|thank you|ok|oke|duoc roi|hay qua)[\s!?.,]*$/', $normalized)) {
+            return 'Không có gì nhé! Khi cần tìm sản phẩm hoặc tư vấn size, bạn cứ nhắn mình.';
+        }
+
+        if (preg_match('/^(tam biet|bye|hen gap lai)[\s!?.,]*$/', $normalized)) {
+            return 'Tạm biệt bạn nhé! Chúc bạn chọn được món đồ thật ưng ý.';
+        }
+
+        return null;
     }
 
     private function sizeAvailabilityLine(array $candidate, ?array $sizeRecommendation): ?string

@@ -1,8 +1,9 @@
-@props(['variants' => []])
+@props(['variants' => [], 'mode' => 'apparel'])
 
 @php
     $rows = collect($variants)
         ->map(fn ($variant) => [
+            'id' => $variant['id'] ?? null,
             'size' => $variant['size'] ?? '',
             'color' => $variant['color'] ?? '',
             'image_path' => $variant['image_path'] ?? '',
@@ -14,17 +15,26 @@
         ->values()
         ->all();
 
+    if ($mode !== 'apparel') {
+        $rows = collect($rows)->map(function (array $row) use ($mode) {
+            $row['size'] = $row['size'] ?: 'Mặc định';
+            $row['color'] = $row['color'] ?: 'Mặc định';
+            return $row;
+        })->all();
+    }
+
     if (count($rows) === 0) {
-        $rows = [['size' => '', 'color' => '', 'stock' => 0, 'price' => '', 'sku' => '']];
+        $rows = [['id' => null, 'size' => '', 'color' => '', 'stock' => 0, 'price' => '', 'sku' => '']];
     }
 @endphp
 
 <section
-    class="border-t border-slate-100 pt-5"
+    class="product-variant-editor border-t border-slate-100 pt-5"
+    data-mode="{{ $mode }}"
     x-data='{
         variants: @json($rows),
         addVariant() {
-            this.variants.push({ size: "", color: "", stock: 0, price: "", sku: "", image_path: "", image_url: "" });
+            this.variants.push({ id: null, size: "", color: "", stock: 0, price: "", sku: "", image_path: "", image_url: "" });
         },
         removeVariant(index) {
             if (this.variants.length > 1) this.variants.splice(index, 1);
@@ -48,6 +58,7 @@
                     <button type="button" class="text-xs font-semibold text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-40" x-on:click="removeVariant(index)" x-bind:disabled="variants.length === 1">Xóa dòng</button>
                 </div>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <input type="hidden" x-model="variant.id" x-bind:name="'variants[' + index + '][id]'" />
                     <label class="block text-xs font-medium text-slate-600">Size<input class="admin-input mt-1" x-model.trim="variant.size" x-bind:name="'variants[' + index + '][size]'" placeholder="VD: M" required /></label>
                     <label class="block text-xs font-medium text-slate-600">Màu sắc<input class="admin-input mt-1" x-model.trim="variant.color" x-bind:name="'variants[' + index + '][color]'" placeholder="VD: Đen" required /></label>
                     <label class="block text-xs font-medium text-slate-600">Số lượng tồn<input class="admin-input mt-1" x-model.number="variant.stock" x-bind:name="'variants[' + index + '][stock]'" type="number" min="0" max="1000" required /></label>
@@ -61,3 +72,7 @@
         </template>
     </div>
 </section>
+<style>
+    [data-mode="bag"] fieldset label:nth-of-type(1),
+    [data-mode="cosmetics"] fieldset label:nth-of-type(1) { display: none; }
+</style>

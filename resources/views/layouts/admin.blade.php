@@ -90,5 +90,28 @@
             </main>
         </div>
     </div>
+    <script>
+        (() => {
+            const numericInputs = [...document.querySelectorAll('input[type="number"]')];
+            const digitsOnly = (value) => String(value ?? '').replace(/[^0-9]/g, '');
+            const display = (value) => {
+                const digits = digitsOnly(value).replace(/^0+(?=\d)/, '');
+                return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            };
+            numericInputs.forEach((input) => {
+                input.type = 'text';
+                input.inputMode = 'numeric';
+                input.autocomplete = 'off';
+                input.dataset.numberFormat = 'thousands';
+                input.value = display(input.value);
+                input.addEventListener('input', () => { input.value = display(input.value); });
+            });
+            document.querySelectorAll('form').forEach((form) => form.addEventListener('submit', () => {
+                form.querySelectorAll('[data-number-format="thousands"]').forEach((input) => {
+                    input.value = digitsOnly(input.value);
+                });
+            }));
+        })();
+    </script>
 </body>
 </html>

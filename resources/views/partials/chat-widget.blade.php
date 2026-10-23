@@ -1,7 +1,10 @@
 <div id="chat-box" class="nd-chat-panel z-[151] hidden max-h-[min(420px,70vh)] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[color:var(--line-soft)] bg-white shadow-2xl" style="height: 400px">
     <div class="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1a1a2e] to-[#16213e] px-4 py-3 text-white">
         <span class="text-sm font-semibold"><i class="fas fa-robot mr-2 text-[color:var(--gold)]"></i>Trợ lý cửa hàng</span>
-        <button type="button" id="chat-close" class="text-white/70 transition hover:text-white" aria-label="Đóng">&times;</button>
+        <div class="flex items-center gap-3">
+            <button type="button" id="chat-clear" class="text-xs text-white/65 transition hover:text-white" title="Xóa lịch sử chat" aria-label="Xóa lịch sử chat"><i class="fas fa-trash-alt"></i></button>
+            <button type="button" id="chat-close" class="text-white/70 transition hover:text-white" aria-label="Đóng">&times;</button>
+        </div>
     </div>
     <div id="chat-messages" class="flex-1 space-y-2 overflow-y-auto bg-[#f7f7f9] p-3 text-sm"></div>
     <form id="chat-form" class="flex gap-2 border-t border-[color:var(--line-soft)] bg-white p-2">
@@ -48,26 +51,102 @@ const chatFormatMessage = (value) => {
     .replace(/\n/g, '<br>');
 };
 
-document.getElementById('chat-fab')?.addEventListener('click',()=>{document.getElementById('chat-box').classList.remove('hidden');document.getElementById('chat-box').classList.add('flex');});
-document.getElementById('chat-close')?.addEventListener('click',()=>{document.getElementById('chat-box').classList.add('hidden');document.getElementById('chat-box').classList.remove('flex');});
+const chatHistoryKey = 'qudena_chat_history_v1';
+const chatIsAuthenticated = @json(auth()->check());
+const chatBox = document.getElementById('chat-messages');
+const chatToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+
+const chatAppend = (role, msg) => {
+  const d = document.createElement('div');
+  d.className = role === 'user' ? 'text-right' : 'text-left';
+  d.innerHTML = '<span class="inline-block max-w-[85%] rounded-2xl px-3 py-2 '+(role === 'user' ? 'bg-[color:var(--accent)] text-white' : 'border border-[color:var(--line-soft)] bg-white text-[color:var(--text-main)]')+'">'+chatFormatMessage(msg)+'</span>';
+  chatBox?.appendChild(d);
+  if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+const chatSaveGuestHistory = (messages) => {
+  if (!chatIsAuthenticated) localStorage.setItem(chatHistoryKey, JSON.stringify(messages.slice(-100)));
+};
+
+const chatReadGuestHistory = () => {
+  try {
+    const history = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]');
+    return Array.isArray(history) ? history : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const chatRenderHistory = (messages) => {
+  if (!chatBox) return;
+  chatBox.replaceChildren();
+  messages.forEach((item) => chatAppend(item.role, item.message));
+};
+
+const chatLoadHistory = async () => {
+  if (chatIsAuthenticated) {
+    try {
+      const response = await fetch('{{ route('chat.history') }}', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      const payload = await response.json();
+      chatRenderHistory(payload.messages || []);
+      return;
+    } catch (error) {}
+  }
+  chatRenderHistory(chatReadGuestHistory());
+};
+
+document.getElementById('chat-fab')?.addEventListener('click', () => {
+  document.getElementById('chat-box').classList.remove('hidden');
+  document.getElementById('chat-box').classList.add('flex');
+});
+document.getElementById('chat-close')?.addEventListener('click', () => {
+  document.getElementById('chat-box').classList.add('hidden');
+  document.getElementById('chat-box').classList.remove('flex');
+});
+document.getElementById('chat-clear')?.addEventListener('click', async () => {
+  if (! window.confirm('Xóa toàn bộ lịch sử trò chuyện?')) return;
+  if (chatIsAuthenticated) {
+    await fetch('{{ route('chat.history.clear') }}', { method: 'DELETE', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': chatToken } });
+  } else {
+    localStorage.removeItem(chatHistoryKey);
+  }
+  chatRenderHistory([]);
+});
+
 document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = document.getElementById('chat-input');
-  const text = (input.value||'').trim();
+  const text = (input.value || '').trim();
   if (!text) return;
-  const box = document.getElementById('chat-messages');
-  const append = (role, msg) => {
-    const d = document.createElement('div');
-    d.className = role==='user' ? 'text-right' : 'text-left';
-    d.innerHTML = '<span class="inline-block max-w-[85%] rounded-2xl px-3 py-2 '+(role==='user'?'bg-[color:var(--accent)] text-white':'bg-white border border-[color:var(--line-soft)] text-[color:var(--text-main)]')+'">'+chatFormatMessage(msg)+'</span>';
-    box.appendChild(d); box.scrollTop = box.scrollHeight;
-  };
-  append('user', text); input.value='';
-  const token = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+  const submit = e.currentTarget.querySelector('button[type="submit"]');
+  const history = chatIsAuthenticated ? [] : chatReadGuestHistory();
+  chatAppend('user', text);
+  if (!chatIsAuthenticated) history.push({ role: 'user', message: text });
+  chatSaveGuestHistory(history);
+  input.value = '';
+  if (submit) submit.disabled = true;
   try {
-    const res = await fetch('{{ url('/chat') }}', {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':token,'Accept':'application/json'},body:JSON.stringify({message:text})});
+    const requestBody = { message: text };
+    if (!chatIsAuthenticated) requestBody.history = history.slice(-10);
+    const res = await fetch('{{ url('/chat') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': chatToken, 'Accept': 'application/json' }, body: JSON.stringify(requestBody) });
     const data = await res.json();
-    append('bot', data.reply || 'Không có phản hồi.');
-  } catch (err) { append('bot', 'Lỗi kết nối, thử lại sau.'); }
+    if (!res.ok) throw new Error(data.message || 'Chat request failed.');
+    chatAppend('assistant', data.reply || 'Không có phản hồi.');
+    if (!chatIsAuthenticated) {
+      history.push({ role: 'assistant', message: data.reply || 'Không có phản hồi.' });
+      chatSaveGuestHistory(history);
+    }
+  } catch (err) {
+    const fallback = 'Lỗi kết nối, thử lại sau.';
+    chatAppend('assistant', fallback);
+    if (!chatIsAuthenticated) {
+      history.push({ role: 'assistant', message: fallback });
+      chatSaveGuestHistory(history);
+    }
+  } finally {
+    if (submit) submit.disabled = false;
+  }
 });
+
+chatLoadHistory();
 </script>
