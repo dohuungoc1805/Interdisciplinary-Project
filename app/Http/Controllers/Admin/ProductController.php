@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\InventoryMovement;
+use App\Models\OrderItem;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -107,10 +108,10 @@ class ProductController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv',
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
 
-        $import = new ProductsImport;
+        $import = new ProductsImport($request->file('file')->getRealPath());
         Excel::import($import, $request->file('file'));
 
         $message = "Import hoàn tất. Tạo mới: {$import->created}, cập nhật: {$import->updated}.";
@@ -238,9 +239,34 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        $product->update(['is_active' => false]);
+        $product->update(['is_active' => false, 'status' => 'discontinued']);
 
         return redirect()->route('admin.products.index')->with('status', 'Đã chuyển sản phẩm sang trạng thái Ngừng kinh doanh.');
+    }
+
+    public function forceDestroy(Product $product): RedirectResponse
+    {
+        if (OrderItem::query()->where('product_id', $product->id)->exists()) {
+            return back()->with('error', 'Không thể xóa vĩnh viễn sản phẩm đã phát sinh đơn hàng. Hãy chuyển sang Ngừng kinh doanh.');
+        }
+
+        $files = array_filter([
+            $product->main_image,
+            ...$product->images()->pluck('path')->all(),
+            ...$product->variants()->pluck('image_path')->all(),
+        ]);
+
+        DB::transaction(function () use ($product) {
+            $product->delete();
+        });
+
+        foreach (array_unique($files) as $file) {
+            if (! preg_match('#^https?://#i', $file)) {
+                Storage::disk('public')->delete($file);
+            }
+        }
+
+        return redirect()->route('admin.products.index')->with('status', 'Đã xóa sản phẩm.');
     }
 
     public function bulk(Request $request): RedirectResponse
@@ -259,8 +285,15 @@ class ProductController extends Controller
         $products = Product::query()->whereIn('id', $data['product_ids'])->get();
         DB::transaction(function () use ($products, $data) {
             match ($data['action']) {
-                'activate' => $products->each->update(['is_active' => true]),
-                'deactivate', 'delete' => $products->each->update(['is_active' => false]),
+                'activate' => $products->each->update(['is_active' => true, 'status' => 'active']),
+                'deactivate' => $products->each->update(['is_active' => false, 'status' => 'discontinued']),
+                'delete' => $products->each(function (Product $product) {
+                    if (OrderItem::query()->where('product_id', $product->id)->exists()) {
+                        $product->update(['is_active' => false, 'status' => 'discontinued']);
+                    } else {
+                        $product->delete();
+                    }
+                }),
                 'category' => $products->each->update(['category_id' => (int) $data['category_id']]),
                 'price' => $products->each->update(['price' => (float) $data['price']]),
                 'stock' => $products->each(fn (Product $product) => $product->variants->each(fn (ProductVariant $variant) => $this->inventoryService->setStock($variant, (int) $data['stock']))),
@@ -273,7 +306,8 @@ class ProductController extends Controller
 
         $message = match ($data['action']) {
             'activate' => 'Đã bật bán các sản phẩm đã chọn.',
-            'deactivate', 'delete' => 'Đã chuyển các sản phẩm đã chọn sang Ngừng kinh doanh.',
+            'deactivate' => 'Đã chuyển các sản phẩm đã chọn sang Ngừng kinh doanh.',
+            'delete' => 'Đã xóa sản phẩm chưa phát sinh đơn; sản phẩm đã có đơn được chuyển sang Ngừng kinh doanh.',
             'category' => 'Đã cập nhật danh mục cho các sản phẩm đã chọn.',
             'price' => 'Đã cập nhật giá cho các sản phẩm đã chọn.',
             'stock' => 'Đã cập nhật tồn kho cho các biến thể của sản phẩm đã chọn.',

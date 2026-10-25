@@ -2,34 +2,15 @@
 
 namespace App\Exports;
 
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class ProductsTemplateExport implements FromCollection, WithHeadings
+class ProductsTemplateExport implements WithMultipleSheets
 {
-    public function headings(): array
+    public function sheets(): array
     {
         return [
-            'sku',
-            'name',
-            'category_id',
-            'description',
-            'main_image_url',
-            'price',
-            'compare_price',
-            'stock',
-            'variant_size',
-            'variant_color',
-            'is_active',
-            'status',
+            new ProductsTemplateSheetExport,
+            new CategoriesTemplateExport,
         ];
-    }
-
-    public function collection(): Collection
-    {
-        return collect([
-            ['SKU-001', 'Áo thun mẫu', 1, 'Mô tả sản phẩm mẫu', '', 199000, 249000, 100, 'Freesize', 'Mặc định', 1, 'active'],
-        ]);
     }
 }

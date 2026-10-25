@@ -23,6 +23,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('products/template', [ProductController::class, 'template'])->name('products.template');
     Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
     Route::post('products/bulk', [ProductController::class, 'bulk'])->name('products.bulk');
+    Route::delete('products/{product}/force-destroy', [ProductController::class, 'forceDestroy'])->name('products.force-destroy');
     Route::get('products/inventory-movements', [ProductController::class, 'inventoryMovements'])->name('products.inventory-movements');
     Route::resource('products', ProductController::class)->except(['show']);
     Route::resource('coupons', CouponController::class)->except(['show']);

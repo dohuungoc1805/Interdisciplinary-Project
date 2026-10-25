@@ -85,6 +85,7 @@
                     <option value="">Chọn thao tác</option>
                     <option value="activate">Bật bán</option>
                     <option value="deactivate">Ngừng kinh doanh</option>
+                    <option value="delete">Xóa sản phẩm</option>
                     <option value="category">Đổi danh mục</option>
                     <option value="price">Cập nhật giá</option>
                     <option value="price_increase_percent">Tăng giá theo %</option>
@@ -143,12 +144,15 @@
                                     'text-emerald-700' => (int) $p->stock_total > config('shop.low_stock_threshold'),
                                 ])>{{ (int) $p->stock_total }}</span>
                             </td>
-                            @php $status = $p->status ?? ($p->is_active ? 'active' : 'discontinued'); @endphp
+                            @php $status = $p->is_active ? ($p->status ?: 'active') : 'discontinued'; @endphp
                             <td><span class="rounded-full px-2.5 py-1 text-xs font-medium {{ match($status) { 'active' => 'bg-emerald-100 text-emerald-800', 'draft' => 'bg-violet-100 text-violet-800', 'hidden' => 'bg-amber-100 text-amber-800', default => 'bg-slate-100 text-slate-600' } }}">{{ match($status) { 'active' => 'Đang bán', 'draft' => 'Bản nháp', 'hidden' => 'Tạm ẩn', default => 'Ngừng kinh doanh' } }}</span></td>
                             <td class="whitespace-nowrap text-right">
                                 <a class="admin-link" href="{{ route('admin.products.edit', $p) }}">Sửa</a>
                                 <form class="inline" method="post" action="{{ route('admin.products.destroy', $p) }}" onsubmit="return confirm('Chuyển sản phẩm này sang Ngừng kinh doanh?')">@csrf @method('DELETE')
-                                    <button type="submit" class="admin-link-danger">{{ $p->is_active ? 'Ngừng bán' : 'Đã ngừng' }}</button>
+                                    <button type="submit" class="admin-link-danger">{{ $p->is_active ? 'Ngừng bán' : 'Bật bán' }}</button>
+                                </form>
+                                <form class="ml-2 inline" method="post" action="{{ route('admin.products.force-destroy', $p) }}" onsubmit="return confirm('Xóa vĩnh viễn sản phẩm này? Không thể hoàn tác.')">@csrf @method('DELETE')
+                                    <button type="submit" class="admin-link-danger">Xóa</button>
                                 </form>
                             </td>
                         </tr>
@@ -171,7 +175,7 @@
             const sync = () => { const selected = boxes.filter(box => box.checked).length; count.textContent = `${selected} sản phẩm được chọn`; submit.disabled = selected === 0 || !action.value; const visible = visibleFields[action.value] || []; Object.entries(fields).forEach(([key, field]) => field.classList.toggle('hidden', !visible.includes(key))); };
             all.addEventListener('change', () => { boxes.forEach(box => { box.checked = all.checked; }); sync(); });
             boxes.forEach(box => box.addEventListener('change', sync)); action.addEventListener('change', sync); sync();
-            form.addEventListener('submit', event => { if (!boxes.some(box => box.checked)) { event.preventDefault(); return; } if (['deactivate', 'delete'].includes(action.value) && !confirm('Chuyển các sản phẩm đã chọn sang Ngừng kinh doanh?')) event.preventDefault(); });
+            form.addEventListener('submit', event => { if (!boxes.some(box => box.checked)) { event.preventDefault(); return; } if (action.value === 'deactivate' && !confirm('Chuyển các sản phẩm đã chọn sang Ngừng kinh doanh?')) event.preventDefault(); if (action.value === 'delete' && !confirm('Xóa vĩnh viễn các sản phẩm chưa phát sinh đơn? Sản phẩm đã có đơn sẽ được giữ lại và chuyển sang Ngừng kinh doanh.')) event.preventDefault(); });
         })();
     </script>
 @endsection

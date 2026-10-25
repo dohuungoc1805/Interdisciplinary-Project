@@ -22,7 +22,7 @@
                     'link' => $product
                         ? route('products.show', $product->slug)
                         : ($b->link_url ?: route('products.index')),
-                    'img' => $heroBgPath,
+                    'img' => $b->imagePublicUrl(),
                 ];
             })->values()->all();
 

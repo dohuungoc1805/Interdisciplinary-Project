@@ -62,9 +62,9 @@ class ProductFilterTest extends TestCase
     public function test_catalog_parent_category_includes_products_from_its_child_categories(): void
     {
         \DB::table('categories')->insert([
-            ['id' => 1, 'name' => 'Trẻ em', 'slug' => 'tre-em', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'name' => 'Trẻ em', 'slug' => 'tre-em', 'parent_id' => null, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'name' => 'Bé trai', 'slug' => 'be-trai', 'parent_id' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'name' => 'Thời trang nam', 'slug' => 'thoi-trang-nam', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'name' => 'Thời trang nam', 'slug' => 'thoi-trang-nam', 'parent_id' => null, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
         \DB::table('products')->insert([
             ['name' => 'Áo hoodie bé trai', 'slug' => 'ao-hoodie-be-trai', 'description' => 'Áo cho bé', 'price' => 259000, 'category_id' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
