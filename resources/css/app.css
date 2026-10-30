@@ -6,19 +6,19 @@
 
 @layer base {
     :root {
-        --primary: #1a1a2e;
-        --accent: #e94560;
-        --accent-hover: #d63851;
-        --gold: #c9a84c;
-        --bg-soft: #ffffff;
-        --surface: #ffffff;
-        --text-main: #333333;
-        --text-muted: #777777;
-        --brand: #e94560;
-        --brand-deep: #d63851;
-        --line-soft: #eeeeee;
-        --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
-        --shadow-card-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+        --primary: #1d293b;
+        --accent: #d9364f;
+        --accent-hover: #b9233a;
+        --gold: #b88a44;
+        --bg-soft: #faf8f4;
+        --surface: #fffefd;
+        --text-main: #2f2a27;
+        --text-muted: #756d67;
+        --brand: #d9364f;
+        --brand-deep: #b9233a;
+        --line-soft: #e9e1d8;
+        --shadow-card: 0 4px 24px rgba(62, 45, 35, 0.07);
+        --shadow-card-lg: 0 12px 40px rgba(62, 45, 35, 0.12);
         --radius-ui: 12px;
         --font-heading: "Playfair Display", ui-serif, Georgia, serif;
         --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -43,9 +43,9 @@
         z-index: -1;
         pointer-events: none;
         background:
-            radial-gradient(circle at 20% 30%, rgba(233, 69, 96, 0.05) 0%, transparent 40%),
-            radial-gradient(circle at 80% 70%, rgba(26, 26, 46, 0.04) 0%, transparent 42%),
-            radial-gradient(circle at 50% 50%, rgba(201, 168, 76, 0.03) 0%, transparent 50%);
+            radial-gradient(circle at 20% 30%, rgba(201, 107, 82, 0.045) 0%, transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(29, 41, 59, 0.035) 0%, transparent 42%),
+            radial-gradient(circle at 50% 50%, rgba(184, 138, 68, 0.025) 0%, transparent 50%);
         animation: nd-mesh-shift 18s ease-in-out infinite alternate;
     }
 
@@ -125,7 +125,7 @@
     }
 
     .primary-cta {
-        @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-ui)] bg-[color:var(--accent)] px-8 py-3.5 text-sm font-semibold tracking-wide text-white shadow-none transition hover:bg-[color:var(--accent-hover)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(233,69,96,0.35)];
+        @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-ui)] bg-[color:var(--accent)] px-8 py-3.5 text-sm font-semibold tracking-wide text-white shadow-none transition hover:bg-[color:var(--accent-hover)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(217,54,79,0.35)];
     }
 
     .secondary-cta {
@@ -179,7 +179,7 @@
     }
 
     .nd-promo-banner {
-        @apply w-full bg-gradient-to-br from-[#1a1a2e] to-[#16213e] py-14 text-white;
+        @apply w-full bg-gradient-to-br from-[color:var(--primary)] to-[#2b3850] py-14 text-white;
     }
 
     .nd-newsletter-block {
@@ -318,7 +318,47 @@
     }
 
     .nd-chat-panel {
-        @apply fixed bottom-6 right-6 z-[151] flex max-h-[min(520px,70vh)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl;
+        @apply fixed bottom-6 right-6 z-[151] flex max-h-[min(600px,78vh)] w-[min(540px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl;
+    }
+
+    .chat-product-grid {
+        @apply grid gap-2 pl-1 sm:grid-cols-2;
+    }
+
+    .chat-product-card {
+        @apply flex min-w-0 overflow-hidden rounded-xl border border-[color:var(--line-soft)] bg-white shadow-sm;
+    }
+
+    .chat-product-card > img {
+        @apply h-24 w-20 shrink-0 object-cover;
+    }
+
+    .chat-product-card__body {
+        @apply flex min-w-0 flex-1 flex-col gap-0.5 p-2;
+    }
+
+    .chat-product-card__body strong {
+        @apply line-clamp-2 text-xs font-semibold text-[color:var(--text-main)];
+    }
+
+    .chat-product-card__price {
+        @apply text-xs font-bold text-[color:var(--accent)];
+    }
+
+    .chat-product-card__body small {
+        @apply text-[10px] text-[color:var(--text-muted)];
+    }
+
+    .chat-product-card__stock {
+        @apply font-semibold text-emerald-600;
+    }
+
+    .chat-product-card__stock.is-empty {
+        @apply text-rose-500;
+    }
+
+    .chat-product-card__link {
+        @apply mt-auto pt-1 text-[11px] font-semibold text-[color:var(--accent)] hover:text-[color:var(--accent-hover)];
     }
 
     .nd-home-bleed {

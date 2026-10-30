@@ -33,10 +33,23 @@ class ChatController extends Controller
                 ->map(fn ($item) => strtoupper($item->role).': '.$item->message)
                 ->implode("\n");
         }
+        $previousUserMessage = collect($recentMessages)
+            ->filter(fn ($item) => ($item->role ?? null) === 'user')
+            ->reject(fn ($item) => trim((string) $item->message) === trim($message))
+            ->last()?->message;
+        $searchMessage = $this->isContextualFollowUp($message) && filled($previousUserMessage)
+            ? trim($previousUserMessage.' '.$message)
+            : $message;
         $candidates = $this->productContextService->findCandidates(
-            $message,
+            $searchMessage,
             (int) config('gemini.chat_max_candidates', 6)
         );
+        $candidates = $this->productContextService->filterForAudience($message, $candidates);
+        $candidates = $this->productContextService->applyPreferenceFilters($searchMessage, $candidates);
+        $needsAgeClarification = $this->productContextService->needsAgeClarification($message, $candidates);
+        if ($needsAgeClarification) {
+            $ctx .= "\nAGE_CLARIFICATION_REQUIRED: The matching products span multiple age groups. Ask whether the item is for an adult man, adult woman, boy, or girl before recommending specific products.";
+        }
         $sizeRecommendation = $this->sizeRecommendationService->recommend($message);
         $isSizingRequest = $this->sizeRecommendationService->isSizingRequest($message);
         if ($sizeRecommendation !== null) {
@@ -49,13 +62,13 @@ class ChatController extends Controller
                 $sizeRecommendation['note']
             );
         } elseif ($isSizingRequest) {
-            $ctx .= "\nSIZE_INPUT_REQUIRED: Ask the customer for both height in cm and weight in kg before recommending a size.";
+            $ctx .= "\nSIZE_INPUT_REQUIRED: Ask only for the missing height or weight in cm/kg before recommending a size. Do not ask again for a measurement the customer already provided.";
         }
 
         $text = $this->geminiService->generateChatReply($message, $ctx, $candidates);
 
         if (str_contains(strtolower($text), 'temporarily unavailable') || str_contains(strtolower($text), 'something went wrong')) {
-            $text = $this->productContextService->fallbackReply($message, $candidates, $sizeRecommendation, $isSizingRequest);
+            $text = $this->productContextService->fallbackReply($message, $candidates, $sizeRecommendation, $isSizingRequest, $needsAgeClarification);
         }
 
         if ($request->user()) {
@@ -65,7 +78,18 @@ class ChatController extends Controller
             ]);
         }
 
-        return response()->json(['reply' => $text]);
+        $quickReplies = $needsAgeClarification ? [
+            ['label' => 'Nam · người lớn', 'message' => 'Tôi muốn đồ mùa đông cho nam người lớn.'],
+            ['label' => 'Nữ · người lớn', 'message' => 'Tôi muốn đồ mùa đông cho nữ người lớn.'],
+            ['label' => 'Bé trai', 'message' => 'Tôi muốn đồ mùa đông cho bé trai.'],
+            ['label' => 'Bé gái', 'message' => 'Tôi muốn đồ mùa đông cho bé gái.'],
+        ] : [];
+
+        return response()->json([
+            'reply' => $text,
+            'products' => $needsAgeClarification ? [] : array_slice($candidates, 0, 3),
+            'quick_replies' => $quickReplies,
+        ]);
     }
 
     public function history(Request $request): JsonResponse
@@ -96,5 +120,16 @@ class ChatController extends Controller
         }
 
         return response()->json(['message' => 'Chat history cleared.']);
+    }
+
+    private function isContextualFollowUp(string $message): bool
+    {
+        $normalized = mb_strtolower((string) \Illuminate\Support\Str::ascii($message));
+
+        $isFilterOrMeasurement = preg_match('/\b\d+(?:[.,]\d+)?\s*(kg|kilo|cm|tuoi|thang)\b/u', $normalized) === 1
+            || preg_match('/\b(size|co|mac|mang|mau|color|loc|duoi|tren|ngan\s*sach|phong\s*cach|so\s*sanh)\b/u', $normalized) === 1;
+        $isNewProductRequest = preg_match('/\b(ao|quan|vay|dam|giay|tui|balo|hoodie|khoac|somi|so\s*mi|jeans|sweater|cardigan)\b/u', $normalized) === 1;
+
+        return $isFilterOrMeasurement && ! $isNewProductRequest;
     }
 }

@@ -9,7 +9,7 @@
             'image_path' => $variant['image_path'] ?? '',
             'image_url' => $variant['image_url'] ?? '',
             'stock' => $variant['stock'] ?? 0,
-            'price' => $variant['price'] ?? '',
+            'price' => filled($variant['price'] ?? null) ? number_format((float) $variant['price'], 0, '.', '') : '',
             'sku' => $variant['sku'] ?? '',
         ])
         ->values()
@@ -62,7 +62,7 @@
                     <label class="block text-xs font-medium text-slate-600">Size<input class="admin-input mt-1" x-model.trim="variant.size" x-bind:name="'variants[' + index + '][size]'" placeholder="VD: M" required /></label>
                     <label class="block text-xs font-medium text-slate-600">Màu sắc<input class="admin-input mt-1" x-model.trim="variant.color" x-bind:name="'variants[' + index + '][color]'" placeholder="VD: Đen" required /></label>
                     <label class="block text-xs font-medium text-slate-600">Số lượng tồn<input class="admin-input mt-1" x-model.number="variant.stock" x-bind:name="'variants[' + index + '][stock]'" type="number" min="0" max="1000" required /></label>
-                    <label class="block text-xs font-medium text-slate-600">Giá riêng<input class="admin-input mt-1" x-model="variant.price" x-bind:name="'variants[' + index + '][price]'" type="number" min="0" step="0.01" placeholder="Dùng giá chung" /></label>
+                    <label class="block text-xs font-medium text-slate-600">Giá riêng<input class="admin-input mt-1" x-model="variant.price" x-bind:name="'variants[' + index + '][price]'" type="number" min="0" step="1" placeholder="Dùng giá chung" /></label>
                 </div>
                 <label class="mt-3 block text-xs font-medium text-slate-600">SKU biến thể <span class="font-normal text-slate-400">(tùy chọn)</span><input class="admin-input mt-1 font-mono text-xs" x-model.trim="variant.sku" x-bind:name="'variants[' + index + '][sku]'" placeholder="VD: AO-HOODIE-M-DEN" /></label>
                 <input type="hidden" x-model="variant.image_path" x-bind:name="'variants[' + index + '][image_path]'" />

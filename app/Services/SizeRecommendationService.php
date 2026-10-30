@@ -40,7 +40,22 @@ class SizeRecommendationService
 
     public function isSizingRequest(string $message): bool
     {
-        return preg_match('/\b(size|kich\s*co|chon\s*co|mac\s*co|vua\s*nguoi)\b/u', $this->normalized($message)) === 1;
+        return preg_match('/\b(size|kich\s*co|chon\s*co|mac\s*co|vua\s*nguoi)\b/u', $this->normalized($message)) === 1
+            || $this->parseHeight($message) !== null
+            || $this->parseWeight($message) !== null;
+    }
+
+    public function missingMeasurementsPrompt(string $message): ?string
+    {
+        $hasHeight = $this->parseHeight($message) !== null;
+        $hasWeight = $this->parseWeight($message) !== null;
+
+        return match (true) {
+            $hasHeight && ! $hasWeight => 'Mình đã có chiều cao của bạn rồi. Bạn cho mình thêm cân nặng (kg) để tư vấn size chính xác hơn nhé.',
+            ! $hasHeight && $hasWeight => 'Mình đã có cân nặng của bạn rồi. Bạn cho mình thêm chiều cao (cm) để tư vấn size chính xác hơn nhé.',
+            ! $hasHeight && ! $hasWeight => 'Để tư vấn size chính xác hơn, bạn cho mình chiều cao (cm) và cân nặng (kg) nhé.',
+            default => null,
+        };
     }
 
     public function isChildrenCategory(?string $categoryName): bool

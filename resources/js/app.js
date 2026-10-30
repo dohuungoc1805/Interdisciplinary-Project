@@ -1,4 +1,5 @@
 import './bootstrap';
+import './scroll-restoration';
 
 import Alpine from 'alpinejs';
 

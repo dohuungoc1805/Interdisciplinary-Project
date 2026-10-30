@@ -79,7 +79,7 @@
                 timer: null,
                 start() {
                     if (this.timer) clearInterval(this.timer);
-                    if (this.n > 1) this.timer = setInterval(() => this.next(), 5600);
+                    if (this.n > 1) this.timer = setInterval(() => this.next(), 4000);
                 }
             }"
             x-init="start()"

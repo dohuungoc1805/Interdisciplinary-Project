@@ -128,6 +128,14 @@ class OrderService
     public function updateStatus(Order $order, string $newStatus, ?string $tracking = null, ?string $adminNote = null): void
     {
         $prev = $order->status;
+        if ($newStatus === OrderStatus::Cancelled->value && $prev !== OrderStatus::Cancelled->value) {
+            $this->restockAndCancel($order, $tracking, $adminNote);
+
+            return;
+        }
+        if ($prev === OrderStatus::Cancelled->value && $newStatus !== OrderStatus::Cancelled->value) {
+            throw new \InvalidArgumentException('A cancelled order cannot be reopened automatically.');
+        }
         if ($adminNote !== null) {
             $order->admin_note = $adminNote;
         }
@@ -180,44 +188,64 @@ class OrderService
         $this->restockAndCancel($order);
     }
 
-    public function restockAndCancel(Order $order): void
+    public function restockAndCancel(Order $order, ?string $tracking = null, ?string $adminNote = null): void
     {
-        DB::transaction(function () use ($order) {
-            if ($order->status === OrderStatus::Cancelled->value) {
-                return;
+        $cancelled = DB::transaction(function () use ($order, $tracking, $adminNote) {
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if ($lockedOrder->status === OrderStatus::Cancelled->value) {
+                return null;
             }
-            $prev = $order->status;
-            foreach ($order->items as $oid) {
+            $prev = $lockedOrder->status;
+            $lockedOrder->load('items');
+            foreach ($lockedOrder->items as $oid) {
                 if ($oid->product_variant_id) {
-                    \App\Models\ProductVariant::query()->whereKey($oid->product_variant_id)
-                        ->increment('stock', $oid->quantity);
+                    $variant = ProductVariant::query()
+                        ->lockForUpdate()
+                        ->find($oid->product_variant_id);
+                    if ($variant) {
+                        $variant->increment('stock', $oid->quantity);
+                    }
                     InventoryMovement::query()->create([
                         'product_variant_id' => $oid->product_variant_id,
                         'type' => 'return',
                         'quantity' => (int) $oid->quantity,
-                        'unit_cost' => $oid->variant?->avg_cost,
+                        'unit_cost' => $variant?->avg_cost,
                         'reference_type' => 'order_cancel',
-                        'reference_id' => $order->id,
+                        'reference_id' => $lockedOrder->id,
                         'moved_at' => now(),
                     ]);
                 }
             }
-            if ($order->coupon_id) {
-                $c = Coupon::query()->find($order->coupon_id);
+            if ($lockedOrder->coupon_id) {
+                $c = Coupon::query()->lockForUpdate()->find($lockedOrder->coupon_id);
                 if ($c && $c->used_count > 0) {
                     $c->decrement('used_count');
                 }
             }
-            if ($order->shipping_coupon_id) {
-                $c = Coupon::query()->find($order->shipping_coupon_id);
+            if ($lockedOrder->shipping_coupon_id) {
+                $c = Coupon::query()->lockForUpdate()->find($lockedOrder->shipping_coupon_id);
                 if ($c && $c->used_count > 0) {
                     $c->decrement('used_count');
                 }
             }
-            $order->status = OrderStatus::Cancelled->value;
-            $order->save();
-            event(new OrderStatusChanged($order->fresh(), $prev));
+            $lockedOrder->status = OrderStatus::Cancelled->value;
+            if ($tracking !== null) {
+                $lockedOrder->tracking_number = $tracking;
+            }
+            if ($adminNote !== null) {
+                $lockedOrder->admin_note = $adminNote;
+            }
+            $lockedOrder->save();
+
+            return [$lockedOrder->fresh(), $prev];
         });
+
+        if ($cancelled !== null) {
+            event(new OrderStatusChanged($cancelled[0], $cancelled[1]));
+        }
     }
 
     private function generateOrderNumber(): string

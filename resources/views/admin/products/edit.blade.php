@@ -55,11 +55,11 @@
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="admin-label" for="price">Giá (đ)</label>
-                        <input id="price" name="price" type="number" min="0" step="0.01" class="admin-input" required value="{{ old('price', $product->price) }}" />
+                        <input id="price" name="price" type="number" min="0" step="1" class="admin-input" required value="{{ number_format((float) old('price', $product->price), 0, '.', '') }}" />
                     </div>
                     <div>
                         <label class="admin-label" for="compare_price">Giá gốc / so sánh</label>
-                        <input id="compare_price" name="compare_price" type="number" min="0" step="0.01" class="admin-input" value="{{ old('compare_price', $product->compare_price) }}" />
+                        <input id="compare_price" name="compare_price" type="number" min="0" step="1" class="admin-input" value="{{ old('compare_price') !== null && old('compare_price') !== '' ? number_format((float) old('compare_price'), 0, '.', '') : ($product->compare_price !== null ? number_format((float) $product->compare_price, 0, '.', '') : '') }}" />
                     </div>
                 </div>
                 <div>

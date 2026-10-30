@@ -384,6 +384,25 @@ class ProductController extends Controller
             ]);
         }
 
+        if ($productId) {
+            $submittedIds = collect($data['variants'])
+                ->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values();
+            if ($submittedIds->isNotEmpty()) {
+                $foreignVariantExists = ProductVariant::query()
+                    ->whereIn('id', $submittedIds->all())
+                    ->where('product_id', '!=', $productId)
+                    ->exists();
+                if ($foreignVariantExists) {
+                    throw ValidationException::withMessages([
+                        'variants' => 'Variant khong thuoc san pham dang duoc chinh sua.',
+                    ]);
+                }
+            }
+        }
+
         $variantSkus = collect($data['variants'])->pluck('sku')->filter()->map(fn ($sku) => Str::lower(trim((string) $sku)));
         if ($variantSkus->count() !== $variantSkus->unique()->count()) {
             throw ValidationException::withMessages(['variants' => 'SKU của các biến thể không được trùng nhau.']);

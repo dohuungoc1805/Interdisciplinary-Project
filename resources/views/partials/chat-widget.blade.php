@@ -1,4 +1,4 @@
-<div id="chat-box" class="nd-chat-panel z-[151] hidden max-h-[min(420px,70vh)] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[color:var(--line-soft)] bg-white shadow-2xl" style="height: 400px">
+<div id="chat-box" class="nd-chat-panel z-[151] hidden max-h-[min(600px,78vh)] w-[min(540px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[color:var(--line-soft)] bg-white shadow-2xl" style="height: 600px">
     <div class="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1a1a2e] to-[#16213e] px-4 py-3 text-white">
         <span class="text-sm font-semibold"><i class="fas fa-robot mr-2 text-[color:var(--gold)]"></i>Trợ lý cửa hàng</span>
         <div class="flex items-center gap-3">
@@ -43,7 +43,10 @@ const chatLinkifyPlainUrls = (value) => value.replace(/https?:\/\/[^\s<]+/g, (ra
 });
 
 const chatFormatMessage = (value) => {
-  const escaped = chatEscapeHtml(value || '');
+  const normalized = String(value || '')
+    .replace(/\\(?=\r?\n|$)/gm, '')
+    .replace(/\\([*-])/g, '$1');
+  const escaped = chatEscapeHtml(normalized);
   return escaped
     .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, href) => chatAnchor(href, label))
     .replace(/(^|[\s>])((?:https?:\/\/)[^\s<]+)/g, (match, prefix, rawUrl) => prefix + chatLinkifyPlainUrls(rawUrl))
@@ -62,6 +65,80 @@ const chatAppend = (role, msg) => {
   d.innerHTML = '<span class="inline-block max-w-[85%] rounded-2xl px-3 py-2 '+(role === 'user' ? 'bg-[color:var(--accent)] text-white' : 'border border-[color:var(--line-soft)] bg-white text-[color:var(--text-main)]')+'">'+chatFormatMessage(msg)+'</span>';
   chatBox?.appendChild(d);
   if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+const chatAppendQuickReplies = (options) => {
+  if (!chatBox || !Array.isArray(options) || options.length === 0) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-quick-replies flex flex-wrap gap-2 pl-1';
+  options.forEach((option) => {
+    if (!option?.label) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'rounded-full border border-[color:var(--accent)] bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)] transition hover:bg-[color:var(--accent)] hover:text-white';
+    button.textContent = option.label;
+    button.addEventListener('click', () => {
+      const input = document.getElementById('chat-input');
+      const form = document.getElementById('chat-form');
+      if (!input || !form) return;
+      input.value = option.message || option.label;
+      wrap.remove();
+      form.requestSubmit();
+    });
+    wrap.appendChild(button);
+  });
+  if (wrap.childElementCount > 0) chatBox.appendChild(wrap);
+  chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+const chatAppendProducts = (products) => {
+  if (!chatBox || !Array.isArray(products) || products.length === 0) return;
+  const grid = document.createElement('div');
+  grid.className = 'chat-product-grid';
+  products.forEach((product) => {
+    if (!product?.name || !product?.product_url) return;
+    const card = document.createElement('article');
+    card.className = 'chat-product-card';
+    if (product.image_url) {
+      const image = document.createElement('img');
+      image.src = product.image_url;
+      image.alt = product.name;
+      image.loading = 'lazy';
+      card.appendChild(image);
+    }
+    const body = document.createElement('div');
+    body.className = 'chat-product-card__body';
+    const name = document.createElement('strong');
+    name.textContent = product.name;
+    body.appendChild(name);
+    const price = document.createElement('span');
+    price.className = 'chat-product-card__price';
+    price.textContent = new Intl.NumberFormat('vi-VN').format(Math.round(Number(product.price || 0))) + ' ₫';
+    body.appendChild(price);
+    const stock = document.createElement('small');
+    stock.textContent = product.in_stock ? 'Còn hàng' : 'Tạm hết hàng';
+    stock.className = product.in_stock ? 'chat-product-card__stock' : 'chat-product-card__stock is-empty';
+    body.appendChild(stock);
+    if (Array.isArray(product.available_sizes) && product.available_sizes.length > 0) {
+      const sizes = document.createElement('small');
+      sizes.textContent = 'Size: ' + product.available_sizes.join(', ');
+      body.appendChild(sizes);
+    }
+    if (Array.isArray(product.available_colors) && product.available_colors.length > 0) {
+      const colors = document.createElement('small');
+      colors.textContent = 'Màu: ' + product.available_colors.slice(0, 3).join(', ');
+      body.appendChild(colors);
+    }
+    const link = document.createElement('a');
+    link.href = product.product_url;
+    link.textContent = 'Xem chi tiết →';
+    link.className = 'chat-product-card__link';
+    body.appendChild(link);
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+  if (grid.childElementCount > 0) chatBox.appendChild(grid);
+  chatBox.scrollTop = chatBox.scrollHeight;
 };
 
 const chatSaveGuestHistory = (messages) => {
@@ -132,6 +209,8 @@ document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Chat request failed.');
     chatAppend('assistant', data.reply || 'Không có phản hồi.');
+    chatAppendProducts(data.products || []);
+    chatAppendQuickReplies(data.quick_replies || []);
     if (!chatIsAuthenticated) {
       history.push({ role: 'assistant', message: data.reply || 'Không có phản hồi.' });
       chatSaveGuestHistory(history);
