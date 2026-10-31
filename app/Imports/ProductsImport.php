@@ -204,10 +204,13 @@ class ProductsImport implements ToCollection, WithMultipleSheets
                     $this->created++;
                 }
 
-                $variant = $product->variants()
-                    ->where('size', $variantSize)
-                    ->where('color', $variantColor)
-                    ->first();
+                // Reuse an existing variant SKU when an import assigns its real size.
+                // This converts placeholder sizes without leaving duplicate variants.
+                $variant = $product->variants()->where('sku', $variantSku)->first()
+                    ?? $product->variants()
+                        ->where('size', $variantSize)
+                        ->where('color', $variantColor)
+                        ->first();
                 if ($stockValue !== null || ! $variant || $variantImageUrl !== '') {
                     if ($variantSku === $sku.'-1' && $product->variants()->exists()) {
                         $variantSku = $sku.'-'.Str::upper(Str::slug($variantSize.'-'.$variantColor));
@@ -346,9 +349,10 @@ class ProductsImport implements ToCollection, WithMultipleSheets
                     $contents = ob_get_clean();
                 } else {
                     $path = $drawing->getPath();
-                    if (is_string($path) && is_file($path)) {
-                        $contents = file_get_contents($path);
-                        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'png';
+                    if (is_string($path) && $path !== '') {
+                        // PhpSpreadsheet exposes embedded XLSX images through zip:// URLs.
+                        $contents = @file_get_contents($path);
+                        $extension = strtolower($drawing->getExtension()) ?: 'png';
                     }
                 }
 

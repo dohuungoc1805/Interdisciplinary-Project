@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(CatalogSeeder::class);
+        $this->call(ImportedProductsSeeder::class);
 
         Coupon::query()->updateOrCreate(
             ['code' => 'WELCOME10'],

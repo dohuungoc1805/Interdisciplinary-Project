@@ -19,6 +19,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/framework/php-8.4.ini
 /vendor
 _ide_helper.php
 Homestead.json
