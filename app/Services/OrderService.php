@@ -29,14 +29,18 @@ class OrderService
         ?array $manualAddress = null,
         ?string $customerNote = null,
         string $paymentMethod = 'cod',
+        ?array $selectedItemIds = null,
     ): Order {
-        $totals = $this->cartService->getTotals($cart);
+        $totals = $this->cartService->getTotals($cart, $selectedItemIds);
         $cart->load('items.variant.product');
-        if ($cart->items->isEmpty()) {
+        $lines = $selectedItemIds === null
+            ? $cart->items
+            : $cart->items->whereIn('id', $selectedItemIds)->values();
+        if ($lines->isEmpty()) {
             throw new \InvalidArgumentException('Cart is empty.');
         }
 
-        return DB::transaction(function () use ($user, $cart, $totals, $addressId, $manualAddress, $customerNote, $paymentMethod) {
+        return DB::transaction(function () use ($user, $cart, $lines, $totals, $addressId, $manualAddress, $customerNote, $paymentMethod, $selectedItemIds) {
             if ($totals['discount'] > 0 && $totals['coupon']) {
                 $c = $totals['coupon'];
                 $c->increment('used_count');
@@ -79,7 +83,7 @@ class OrderService
                 'customer_note' => $customerNote,
             ]);
 
-            foreach ($cart->items as $line) {
+            foreach ($lines as $line) {
                 $v = ProductVariant::query()
                     ->with('product')
                     ->lockForUpdate()
@@ -116,8 +120,13 @@ class OrderService
                     'moved_at' => now(),
                 ]);
             }
-            $cart->items()->delete();
-            $cart->update(['applied_coupon_code' => null, 'applied_shipping_coupon_code' => null]);
+            $lineIds = $lines->pluck('id')->all();
+            $cartItemCount = $cart->items()->count();
+            $cart->items()->whereIn('id', $lineIds)->delete();
+            $allItemsSelected = $selectedItemIds === null || count($lineIds) === $cartItemCount;
+            if ($allItemsSelected) {
+                $cart->update(['applied_coupon_code' => null, 'applied_shipping_coupon_code' => null]);
+            }
             $placed = $order->fresh(['user', 'items']);
             event(new OrderPlaced($placed));
 

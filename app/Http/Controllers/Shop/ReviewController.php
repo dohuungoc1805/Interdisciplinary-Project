@@ -30,7 +30,7 @@ class ReviewController extends Controller
             ],
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:2000',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,mp4,mov,webm|max:20480',
         ]);
         $order = Order::query()->whereKey($data['order_id'])->firstOrFail();
         if (! $order->items()->where('product_id', $product->id)->exists()) {
@@ -45,7 +45,8 @@ class ReviewController extends Controller
             'order_id' => $order->id,
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
-            'image_path' => $request->hasFile('image') ? $request->file('image')->store('reviews', 'public') : null,
+            'image_path' => $request->hasFile('media') ? $request->file('media')->store('reviews', 'public') : null,
+            'media_type' => $request->hasFile('media') && str_starts_with((string) $request->file('media')->getMimeType(), 'video/') ? 'video' : 'image',
             'is_approved' => false,
         ]);
         $adminUrl = URL::route('admin.reviews-moderation.index');
@@ -66,21 +67,25 @@ class ReviewController extends Controller
         $data = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:2000',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,mp4,mov,webm|max:20480',
         ]);
 
         $wasApproved = $review->is_approved;
         $oldImagePath = $review->image_path;
-        $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('reviews', 'public')
+        $mediaPath = $request->hasFile('media')
+            ? $request->file('media')->store('reviews', 'public')
             : $oldImagePath;
+        $mediaType = $request->hasFile('media')
+            ? (str_starts_with((string) $request->file('media')->getMimeType(), 'video/') ? 'video' : 'image')
+            : ($review->media_type ?: 'image');
         $review->update([
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
-            'image_path' => $imagePath,
+            'image_path' => $mediaPath,
+            'media_type' => $mediaType,
             'is_approved' => false,
         ]);
-        if ($request->hasFile('image') && $oldImagePath && ! preg_match('#^https?://#i', (string) $oldImagePath)) {
+        if ($request->hasFile('media') && $oldImagePath && ! preg_match('#^https?://#i', (string) $oldImagePath)) {
             Storage::disk('public')->delete($oldImagePath);
         }
         $review->product->recalculateReviewStats();

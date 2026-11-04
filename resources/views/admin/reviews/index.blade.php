@@ -63,8 +63,14 @@
                         </div>
                     </div>
                     <p class="leading-relaxed text-slate-700">{{ $review->comment ?: 'Khách hàng không để lại nội dung.' }}</p>
-                    @if($review->imageUrl())
-                        <img src="{{ $review->imageUrl() }}" alt="Ảnh đánh giá" class="h-32 w-28 rounded-lg border border-slate-200 object-cover" />
+                    @if($review->mediaUrl())
+                        @if($review->isVideo())
+                            <video src="{{ $review->mediaUrl() }}" controls preload="metadata" playsinline class="h-40 w-72 rounded-lg border border-slate-200 bg-slate-900 object-contain">Trình duyệt không hỗ trợ phát video.</video>
+                        @else
+                            <a href="{{ $review->mediaUrl() }}" target="_blank" rel="noopener" title="Mở ảnh đánh giá kích thước đầy đủ">
+                                <img src="{{ $review->mediaUrl() }}" alt="Ảnh đánh giá" class="h-32 w-28 rounded-lg border border-slate-200 object-cover transition hover:opacity-80" />
+                            </a>
+                        @endif
                     @endif
                     <form method="post" action="{{ route('admin.reviews-moderation.reply', $review) }}" class="space-y-2 rounded-lg bg-slate-50 p-3">
                         @csrf

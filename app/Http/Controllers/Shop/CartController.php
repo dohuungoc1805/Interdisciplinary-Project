@@ -89,13 +89,31 @@ class CartController extends Controller
         return back()->with('status', 'Cart updated.');
     }
 
+    public function previewSelection(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'item_ids' => ['required', 'array', 'min:1'],
+            'item_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $cart = $this->cartService->currentCart();
+        $itemIds = collect($data['item_ids'])->map(fn ($id) => (int) $id)->unique()->values();
+        abort_if($cart->items()->whereIn('id', $itemIds->all())->count() !== $itemIds->count(), 403);
+
+        return response()->json($this->selectionPayload($cart, $itemIds->all()));
+    }
+
     public function applyCoupon(Request $request): RedirectResponse|JsonResponse
     {
-        $data = $request->validate(['code' => 'required|string|max:32']);
+        $data = $request->validate([
+            'code' => 'required|string|max:32',
+            'item_ids' => ['nullable', 'array'],
+            'item_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
         $code = strtoupper(trim($data['code']));
         $coupon = Coupon::query()->where('code', $code)->first();
         $cart = $this->cartService->currentCart();
-        $totals = $this->cartService->getTotals($cart);
+        $itemIds = $this->validatedItemIds($cart, $data['item_ids'] ?? null);
+        $totals = $this->cartService->getTotals($cart, $itemIds);
         if (! $coupon) {
             return $this->couponError($request, 'Mã giảm giá không tồn tại.');
         }
@@ -113,7 +131,7 @@ class CartController extends Controller
             : ['applied_coupon_code' => $code]);
 
         if ($request->expectsJson()) {
-            return response()->json($this->couponPayload($cart));
+            return response()->json($this->couponPayload($cart, $itemIds));
         }
 
         return back()->with('status', 'Đã áp dụng mã giảm giá.');
@@ -122,13 +140,18 @@ class CartController extends Controller
     public function removeCoupon(Request $request): RedirectResponse|JsonResponse
     {
         $cart = $this->cartService->currentCart();
+        $data = $request->validate([
+            'item_ids' => ['nullable', 'array'],
+            'item_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $itemIds = $this->validatedItemIds($cart, $data['item_ids'] ?? null);
         $kind = $request->string('kind')->toString();
         $cart->update($kind === CouponKind::Shipping->value
             ? ['applied_shipping_coupon_code' => null]
             : ['applied_coupon_code' => null]);
 
         if ($request->expectsJson()) {
-            return response()->json($this->couponPayload($cart));
+            return response()->json($this->couponPayload($cart, $itemIds));
         }
 
         return back()->with('status', 'Đã bỏ mã giảm giá.');
@@ -143,14 +166,34 @@ class CartController extends Controller
         return back()->with('error', $message);
     }
 
-    private function couponPayload(Cart $cart): array
+    private function couponPayload(Cart $cart, ?array $itemIds = null): array
     {
-        $totals = $this->cartService->getTotals($cart);
-
-        return [
+        return array_merge($this->selectionPayload($cart, $itemIds), [
             'message' => 'Cập nhật voucher thành công.',
             'product_code' => $cart->applied_coupon_code,
             'shipping_code' => $cart->applied_shipping_coupon_code,
+        ]);
+    }
+
+    private function selectionPayload(Cart $cart, ?array $itemIds = null): array
+    {
+        $totals = $this->cartService->getTotals($cart, $itemIds);
+        $coupons = Coupon::query()->where('is_active', true)->orderBy('kind')->orderBy('code')->get()
+            ->map(function (Coupon $coupon) use ($totals) {
+                $amount = $coupon->isShipping() ? ($totals['base_shipping'] ?? 0) : $totals['subtotal'];
+                $reason = $coupon->validationErrorForAmount($amount);
+                $discount = $coupon->isShipping()
+                    ? $coupon->discountForAmount($amount)
+                    : $coupon->discountForSubtotal($amount);
+
+                return [
+                    'code' => $coupon->code,
+                    'eligible' => $reason === null && $discount > 0,
+                    'reason' => $reason,
+                ];
+            })->values()->all();
+
+        return [
             'subtotal' => $totals['subtotal'],
             'discount' => $totals['discount'],
             'shipping_discount' => $totals['shipping_discount'],
@@ -159,6 +202,18 @@ class CartController extends Controller
             'is_free_shipping' => $totals['is_free_shipping'],
             'remaining_for_free_shipping' => $totals['remaining_for_free_shipping'],
             'free_shipping_threshold' => $totals['free_shipping_threshold'],
+            'coupons' => $coupons,
         ];
+    }
+
+    private function validatedItemIds(Cart $cart, ?array $itemIds): ?array
+    {
+        if ($itemIds === null) {
+            return null;
+        }
+        $ids = collect($itemIds)->map(fn ($id) => (int) $id)->unique()->values();
+        abort_if($ids->isEmpty() || $cart->items()->whereIn('id', $ids->all())->count() !== $ids->count(), 403);
+
+        return $ids->all();
     }
 }

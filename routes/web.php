@@ -21,6 +21,7 @@ Route::get('/products/{slug}', [ProductController::class, 'show'])->name('produc
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
 Route::patch('/cart/items/{item}', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/selection-preview', [CartController::class, 'previewSelection'])->name('cart.selection.preview');
 Route::post('/cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon');
 Route::delete('/cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
 
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'verified', 'not.blocked'])->group(function () {
     Route::get('/don-mua', [OrderController::class, 'index'])->name('purchases.index');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof'])->name('orders.payment-proof');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
     Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');

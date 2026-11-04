@@ -108,7 +108,7 @@ class ProductController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:25600',
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:20480',
         ]);
 
         $import = new ProductsImport($request->file('file')->getRealPath());

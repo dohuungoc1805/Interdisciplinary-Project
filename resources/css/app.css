@@ -515,6 +515,21 @@
     .admin-table tbody tr {
         @apply transition hover:bg-slate-50/90;
     }
+    .admin-products-table .admin-product-name-cell {
+        width: 30rem;
+        max-width: 30rem;
+        white-space: normal;
+        vertical-align: top;
+    }
+    .admin-products-table .admin-product-name {
+        display: -webkit-box;
+        overflow: hidden;
+        color: #0f172a;
+        font-weight: 600;
+        line-height: 1.35;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
 }
 
 .cart-checkout-layout {

@@ -19,12 +19,67 @@
     <ul class="shop-shell mt-2 divide-y divide-[color:var(--line-soft)]">
         @foreach($order->items as $i)
             <li class="flex justify-between gap-4 p-4 text-sm">
-                <span>{{ $i->name }} @if($i->size) ({{ $i->size }} / {{ $i->color }}) @endif × {{ $i->quantity }}</span>
+                <span>
+                    @if($i->product)
+                        <a href="{{ route('products.show', $i->product->slug) }}" class="font-medium text-[color:var(--primary)] underline-offset-2 hover:text-[color:var(--accent)] hover:underline">
+                            {{ $i->name }}
+                        </a>
+                    @else
+                        {{ $i->name }}
+                    @endif
+                    @if($i->size) ({{ $i->size }} / {{ $i->color }}) @endif × {{ $i->quantity }}
+                </span>
                 <span class="shrink-0 font-semibold text-[color:var(--accent)]">{{ number_format((float) $i->line_total, 0, ',', '.') }} ₫</span>
             </li>
         @endforeach
     </ul>
     <p class="mt-4 text-right text-lg font-bold text-[color:var(--primary)]">Tổng cộng: {{ number_format((float) $order->total, 0, ',', '.') }} ₫ (COD)</p>
+    @if($order->status === 'completed')
+        <section class="shop-shell mt-8 space-y-4 p-5" aria-labelledby="order-review-title">
+            <div>
+                <h2 id="order-review-title" class="font-semibold text-[color:var(--primary)]">Đánh giá sản phẩm</h2>
+                <p class="mt-1 text-sm text-[color:var(--text-muted)]">Chia sẻ trải nghiệm của bạn để giúp cửa hàng phục vụ tốt hơn.</p>
+            </div>
+            @foreach($order->items->unique('product_id') as $item)
+                @if($item->product)
+                    <div class="rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] bg-white p-4">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ $item->product->mainImageUrl() }}" alt="{{ $item->product->name }}" class="h-16 w-14 shrink-0 rounded-lg border border-[color:var(--line-soft)] object-cover" />
+                            <p class="font-semibold text-[color:var(--primary)]">{{ $item->product->name }}</p>
+                        </div>
+                        @if(in_array($item->product_id, $reviewedProductIds, true))
+                            <p class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">Bạn đã gửi đánh giá cho sản phẩm này. Đánh giá đang chờ duyệt hoặc đã được hiển thị.</p>
+                        @else
+                            <form method="post" action="{{ route('reviews.store', $item->product) }}" enctype="multipart/form-data" class="mt-4 space-y-3">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->id }}" />
+                                <div class="grid gap-3 sm:grid-cols-[160px_1fr]">
+                                    <label class="text-sm font-semibold text-[color:var(--primary)]">Số sao
+                                        <select name="rating" class="field-control mt-1" required>
+                                            <option value="5">5 sao — Rất hài lòng</option>
+                                            <option value="4">4 sao — Hài lòng</option>
+                                            <option value="3">3 sao — Bình thường</option>
+                                            <option value="2">2 sao — Chưa hài lòng</option>
+                                            <option value="1">1 sao — Không hài lòng</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-sm font-semibold text-[color:var(--primary)]">Nhận xét
+                                        <textarea name="comment" rows="2" maxlength="2000" class="field-control mt-1" placeholder="Chất lượng, kiểu dáng, giao hàng..."></textarea>
+                                    </label>
+                                </div>
+                                <div class="flex flex-wrap items-end justify-between gap-3">
+                                    <label class="text-xs text-[color:var(--text-muted)]">Ảnh hoặc video trải nghiệm (tùy chọn, tối đa 20MB)
+                                        <input name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="mt-1 block max-w-full text-xs" />
+                                    </label>
+                                    <button type="submit" class="rounded-[var(--radius-ui)] bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[color:var(--accent-hover)]">Gửi đánh giá</button>
+                                </div>
+                            </form>
+                        @endif
+                    </div>
+                @endif
+            @endforeach
+        </section>
+    @endif
     <section class="shop-shell mt-6 p-5" aria-labelledby="payment-title">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -50,6 +105,25 @@
                     </dl>
                 </div>
                 <p class="mt-5 text-xs leading-relaxed text-[color:var(--text-muted)]">Vui lòng không thay đổi số tiền hoặc nội dung chuyển khoản. Cửa hàng sẽ kiểm tra giao dịch trước khi chuẩn bị đơn.</p>
+                <div class="mt-5 rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] bg-white p-4">
+                    <h3 class="font-semibold text-[color:var(--primary)]">Gửi ảnh xác nhận chuyển khoản</h3>
+                    <p class="mt-1 text-sm text-[color:var(--text-muted)]">Sau khi chuyển khoản, tải ảnh biên lai hoặc màn hình giao dịch thành công để cửa hàng đối soát. Ảnh JPG, PNG hoặc WEBP, tối đa 8MB.</p>
+                    @if($order->payment_proof_path)
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <a href="{{ $order->paymentProofUrl() }}" target="_blank" rel="noopener">
+                                <img src="{{ $order->paymentProofUrl() }}" alt="Ảnh xác nhận chuyển khoản" class="h-24 w-32 rounded-lg border border-[color:var(--line-soft)] object-cover" />
+                            </a>
+                            <span class="text-xs text-amber-700">Đã gửi lúc {{ $order->payment_proof_submitted_at?->format('d/m/Y H:i') }} — đang chờ cửa hàng xác minh.</span>
+                        </div>
+                    @endif
+                    <form method="post" action="{{ route('orders.payment-proof', $order) }}" enctype="multipart/form-data" class="mt-3 flex flex-wrap items-end gap-3">
+                        @csrf
+                        <label class="text-sm font-medium text-[color:var(--primary)]">{{ $order->payment_proof_path ? 'Tải ảnh mới' : 'Chọn ảnh giao dịch' }}
+                            <input name="payment_proof" type="file" accept="image/jpeg,image/png,image/webp" required class="mt-1 block max-w-full text-xs" />
+                        </label>
+                        <button type="submit" class="rounded-[var(--radius-ui)] bg-[color:var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[color:var(--accent-hover)]">Gửi ảnh xác nhận</button>
+                    </form>
+                </div>
             @else
                 <p class="mt-3 text-sm text-[color:var(--text-muted)]">Thông tin chuyển khoản đang được cửa hàng cập nhật. Vui lòng liên hệ cửa hàng để được hỗ trợ.</p>
             @endif

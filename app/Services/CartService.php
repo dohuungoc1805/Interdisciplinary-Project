@@ -98,11 +98,14 @@ class CartService
     /**
      * @return array{subtotal: float, discount: float, shipping_discount: float, shipping: float, total: float, coupon: ?Coupon, shipping_coupon: ?Coupon, is_free_shipping: bool, free_shipping_threshold: float, remaining_for_free_shipping: float}
      */
-    public function getTotals(Cart $cart): array
+    public function getTotals(Cart $cart, ?array $itemIds = null): array
     {
         $cart->load('items.variant.product');
+        $lines = $itemIds === null
+            ? $cart->items
+            : $cart->items->whereIn('id', $itemIds)->values();
         $subtotal = 0.0;
-        foreach ($cart->items as $line) {
+        foreach ($lines as $line) {
             $v = $line->variant;
             if (! $v) {
                 continue;

@@ -158,9 +158,15 @@
                     }));
                     size.addEventListener('change', syncVariant);
                     color.addEventListener('change', syncVariant);
-                    if (variants[0]) {
-                        size.value = variants[0].size;
-                        color.value = variants[0].color;
+                    const requestedSize = @json(request('size'));
+                    const requestedColor = @json(request('color'));
+                    const preferredVariant = variants.find(item => item.size === requestedSize && item.color === requestedColor)
+                        || variants.find(item => item.size === requestedSize)
+                        || variants.find(item => item.color === requestedColor)
+                        || variants[0];
+                    if (preferredVariant) {
+                        size.value = preferredVariant.size;
+                        color.value = preferredVariant.color;
                     }
                     syncVariant();
                 })();
@@ -257,7 +263,7 @@
                     <form method="post" action="{{ route('reviews.update', $userReview) }}" enctype="multipart/form-data" class="shop-shell mt-10 space-y-3 border-t border-[color:var(--line-soft)] p-5 pt-8">
                         @csrf
                         @method('PATCH')
-                        <label class="block text-sm font-medium text-[color:var(--primary)]">Ảnh trải nghiệm <span class="font-normal text-[color:var(--text-muted)]">(tùy chọn, tối đa 4MB)</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm" /></label>
+                        <label class="block text-sm font-medium text-[color:var(--primary)]">Ảnh hoặc video trải nghiệm <span class="font-normal text-[color:var(--text-muted)]">(tùy chọn, tối đa 20MB)</span><input name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="mt-1 block w-full text-sm" /></label>
                         <h3 class="font-semibold text-[color:var(--primary)]">Đánh giá của bạn</h3>
                         @if(! $userReview->is_approved)
                             <p class="rounded-[var(--radius-ui)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">Đánh giá đang chờ duyệt. Sau khi sửa, bản cập nhật cũng cần được duyệt trước khi hiển thị công khai.</p>
@@ -278,7 +284,7 @@
                 @elseif($reviewableOrders->isNotEmpty())
                     <form method="post" action="{{ route('reviews.store', $product) }}" enctype="multipart/form-data" class="shop-shell mt-10 space-y-3 border-t border-[color:var(--line-soft)] p-5 pt-8">
                         @csrf
-                        <label class="block text-sm font-medium text-[color:var(--primary)]">Ảnh trải nghiệm <span class="font-normal text-[color:var(--text-muted)]">(tùy chọn, tối đa 4MB)</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm" /></label>
+                        <label class="block text-sm font-medium text-[color:var(--primary)]">Ảnh hoặc video trải nghiệm <span class="font-normal text-[color:var(--text-muted)]">(tùy chọn, tối đa 20MB)</span><input name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="mt-1 block w-full text-sm" /></label>
                         <h3 class="font-semibold text-[color:var(--primary)]">Viết đánh giá</h3>
                         <p class="text-xs text-[color:var(--text-muted)]">Chỉ các đơn hàng <strong>Hoàn thành</strong> có sản phẩm này mới được dùng để đánh giá. Chọn đơn tương ứng bên dưới.</p>
                         <div>
@@ -327,10 +333,14 @@
                                     @if($r->admin_replied_at)<p class="mt-1 text-xs text-[color:var(--text-muted)]">{{ $r->admin_replied_at->format('d/m/Y H:i') }}</p>@endif
                                 </div>
                             @endif
-                            @if($r->imageUrl())
-                                <button type="button" class="mt-3 block cursor-zoom-in" data-review-image="{{ $r->imageUrl() }}" aria-label="Phóng to ảnh đánh giá">
-                                    <img src="{{ $r->imageUrl() }}" alt="Ảnh đánh giá của {{ $r->user->name }}" loading="lazy" class="h-32 w-28 rounded-lg border border-[color:var(--line-soft)] object-cover transition hover:opacity-80" />
-                                </button>
+                            @if($r->mediaUrl())
+                                @if($r->isVideo())
+                                    <video src="{{ $r->mediaUrl() }}" controls preload="metadata" playsinline class="mt-3 h-40 w-72 rounded-lg border border-[color:var(--line-soft)] bg-slate-900 object-contain">Trình duyệt không hỗ trợ phát video.</video>
+                                @else
+                                    <button type="button" class="mt-3 block cursor-zoom-in" data-review-image="{{ $r->mediaUrl() }}" aria-label="Phóng to ảnh đánh giá">
+                                        <img src="{{ $r->mediaUrl() }}" alt="Ảnh đánh giá của {{ $r->user->name }}" loading="lazy" class="h-32 w-28 rounded-lg border border-[color:var(--line-soft)] object-cover transition hover:opacity-80" />
+                                    </button>
+                                @endif
                             @endif
                         </div>
                     @empty

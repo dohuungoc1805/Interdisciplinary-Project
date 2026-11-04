@@ -29,16 +29,33 @@
             </div>
         @endif
 
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] bg-white px-4 py-3 text-sm">
+            <label class="flex cursor-pointer items-center gap-2 font-semibold text-[color:var(--primary)]">
+                <input type="checkbox" data-cart-select-all class="rounded border-[color:var(--line-soft)] text-[color:var(--accent)]" checked>
+                Chọn tất cả sản phẩm
+            </label>
+            <span class="text-xs text-[color:var(--text-muted)]" data-cart-selection-count>Đã chọn tất cả</span>
+        </div>
         <div id="cart-lines" class="space-y-3">
             @foreach($cart->items as $line)
                 @php $v = $line->variant; $p = $v?->product; $unit = $v ? (float) $v->unitPriceCents() : 0; @endphp
                 <div class="shop-shell flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4" data-cart-line="{{ $line->id }}" data-unit-price="{{ $unit }}">
+                    <label class="flex shrink-0 cursor-pointer items-center self-start pt-1" title="Chọn sản phẩm để thanh toán">
+                        <input type="checkbox" name="cart_item_ids[]" value="{{ $line->id }}" data-cart-item-check class="h-4 w-4 rounded border-[color:var(--line-soft)] text-[color:var(--accent)]" checked>
+                        <span class="sr-only">Chọn {{ $p?->name }}</span>
+                    </label>
                     <div class="flex min-w-0 items-center gap-3">
                         @if($p)
-                            <img src="{{ $p->mainImageUrl() }}" alt="{{ $p->name }}" class="h-20 w-20 shrink-0 rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] object-cover sm:h-24 sm:w-24" />
+                            <a href="{{ route('products.show', ['slug' => $p->slug, 'size' => $v?->size, 'color' => $v?->color]) }}" class="block shrink-0 rounded-[var(--radius-ui)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]" title="Chọn lại size hoặc màu">
+                                <img src="{{ $p->mainImageUrl() }}" alt="{{ $p->name }}" class="h-20 w-20 rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] object-cover transition hover:opacity-85 sm:h-24 sm:w-24" />
+                            </a>
                         @endif
                         <div class="min-w-0">
-                            <p class="font-semibold text-[color:var(--primary)]">{{ $p?->name }} — {{ $v?->size }} / {{ $v?->color }}</p>
+                            @if($p)
+                                <a href="{{ route('products.show', ['slug' => $p->slug, 'size' => $v?->size, 'color' => $v?->color]) }}" class="font-semibold text-[color:var(--primary)] transition hover:text-[color:var(--accent)] hover:underline" title="Chọn lại size hoặc màu">{{ $p->name }} — {{ $v?->size }} / {{ $v?->color }}</a>
+                            @else
+                                <p class="font-semibold text-[color:var(--primary)]">{{ $p?->name }} — {{ $v?->size }} / {{ $v?->color }}</p>
+                            @endif
                             <p class="mt-1 text-xs text-[color:var(--text-muted)]">Đơn giá {{ number_format($unit, 0, ',', '.') }} ₫</p>
                         </div>
                     </div>
@@ -116,11 +133,12 @@
             <p id="cart-shipping-discount-row" class="flex justify-between {{ (float) $totals['shipping_discount'] <= 0 ? 'hidden' : '' }}"><span>Giảm phí vận chuyển</span><strong id="cart-shipping-discount" class="text-[color:var(--accent)]">-{{ number_format($totals['shipping_discount'], 0, ',', '.') }} ₫</strong></p>
             <p class="flex justify-between"><span>Phí vận chuyển</span><strong id="cart-shipping">{{ number_format($totals['shipping'], 0, ',', '.') }} ₫</strong></p>
             <p class="flex justify-between border-t border-[color:var(--line-soft)] pt-3 text-xl font-bold text-[color:var(--accent)]"><span class="text-[color:var(--primary)]">Tổng cộng</span><span id="cart-total">{{ number_format($totals['total'], 0, ',', '.') }} ₫</span></p>
-            <div class="mt-auto pt-4">
+            <div class="mt-auto space-y-2 pt-4">
                 @auth
-                    <a href="{{ route('checkout.create') }}" class="primary-cta w-full">Thanh toán</a>
+                    <button type="button" data-checkout-selected class="primary-cta w-full justify-center">Thanh toán sản phẩm đã chọn</button>
+                    <a href="{{ route('checkout.create') }}" class="block w-full rounded-[var(--radius-ui)] border border-[color:var(--line-soft)] px-4 py-2.5 text-center text-sm font-semibold text-[color:var(--primary)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]">Thanh toán tất cả</a>
                 @else
-                    <a href="{{ route('login') }}" class="primary-cta w-full">Đăng nhập để thanh toán</a>
+                    <a href="{{ route('login') }}" class="primary-cta w-full justify-center">Đăng nhập để thanh toán</a>
                 @endauth
             </div>
         </div>
@@ -273,6 +291,8 @@
         const button = form.querySelector('button[type="submit"]');
         if (button) button.disabled = true;
         try {
+            const body = new FormData(form);
+            document.querySelectorAll('[data-cart-item-check]:checked').forEach((item) => body.append('item_ids[]', item.value));
             const response = await fetch(form.action, {
                 method: 'POST',
                 headers: {
@@ -280,7 +300,7 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                 },
-                body: new FormData(form),
+                body,
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.message || 'Không thể cập nhật voucher.');
@@ -332,5 +352,72 @@
             if (button) button.disabled = false;
         }
     };
+</script>
+<script>
+    (() => {
+        const checks = () => [...document.querySelectorAll('[data-cart-item-check]')];
+        const selectAll = document.querySelector('[data-cart-select-all]');
+        const count = document.querySelector('[data-cart-selection-count]');
+        const checkoutSelected = document.querySelector('[data-checkout-selected]');
+        window.updateCartVoucherEligibility = (coupons = []) => {
+            const byCode = new Map(coupons.map((coupon) => [coupon.code, coupon]));
+            document.querySelectorAll('[data-voucher-card]').forEach((card) => {
+                const coupon = byCode.get(card.dataset.voucherCode);
+                if (!coupon) return;
+                card.dataset.voucherEligible = coupon.eligible ? '1' : '0';
+                card.dataset.voucherReason = coupon.reason || '';
+                const state = card.querySelector('[data-voucher-state]');
+                const modernForm = card.querySelector('[data-voucher-modern-form]');
+                const selected = card.dataset.voucherCode === (card.dataset.voucherKind === 'shipping' ? @json($cart->applied_shipping_coupon_code) : @json($cart->applied_coupon_code));
+                if (state && !selected) state.textContent = coupon.eligible ? 'Có thể áp dụng' : 'Không đủ điều kiện';
+                card.querySelector('[data-voucher-reason]')?.replaceChildren(document.createTextNode(coupon.reason || ''));
+                modernForm?.classList.toggle('hidden', selected || !coupon.eligible);
+                modernForm?.querySelector('button')?.toggleAttribute('disabled', !coupon.eligible);
+            });
+        };
+        const refreshSelection = async (selectedIds) => {
+            if (!selectedIds.length) return;
+            try {
+                const response = await fetch(@json(route('cart.selection.preview')), {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                    body: JSON.stringify({ item_ids: selectedIds }),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.message || 'Không thể cập nhật tổng tiền.');
+                window.updateCartSummary?.(payload);
+                window.updateCartVoucherEligibility?.(payload.coupons);
+            } catch (error) {
+                window.alert(error.message);
+            }
+        };
+        const sync = () => {
+            const items = checks();
+            const selected = items.filter((item) => item.checked).length;
+            if (selectAll) selectAll.checked = items.length > 0 && selected === items.length;
+            if (count) count.textContent = selected === items.length ? 'Đã chọn tất cả' : `Đã chọn ${selected}/${items.length} sản phẩm`;
+            checkoutSelected?.toggleAttribute('disabled', selected === 0);
+            checkoutSelected?.classList.toggle('opacity-50', selected === 0);
+            refreshSelection(items.filter((item) => item.checked).map((item) => item.value));
+        };
+        selectAll?.addEventListener('change', () => {
+            checks().forEach((item) => { item.checked = selectAll.checked; });
+            sync();
+        });
+        document.addEventListener('change', (event) => {
+            if (event.target.matches('[data-cart-item-check]')) sync();
+        });
+        checkoutSelected?.addEventListener('click', () => {
+            const selectedIds = checks().filter((item) => item.checked).map((item) => item.value);
+            if (!selectedIds.length) {
+                window.alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán.');
+                return;
+            }
+            const url = new URL(@json(route('checkout.create')), window.location.origin);
+            selectedIds.forEach((id) => url.searchParams.append('items[]', id));
+            window.location.href = url.toString();
+        });
+        sync();
+    })();
 </script>
 @endpush

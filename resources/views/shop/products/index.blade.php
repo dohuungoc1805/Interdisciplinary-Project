@@ -98,39 +98,6 @@
                             @endforeach
                         </select>
                     </label>
-                    <fieldset>
-                        <legend class="mb-2 font-medium text-[color:var(--primary)]">Màu sắc</legend>
-                        <div class="flex flex-wrap gap-2">
-                            <label class="flex h-8 min-w-8 cursor-pointer items-center justify-center border border-[color:var(--line-soft)] bg-white px-2 text-xs font-semibold text-[color:var(--text-muted)]">
-                                <input type="radio" name="color" value="" class="sr-only" @checked(! request('color'))>
-                                <span>Tất cả</span>
-                            </label>
-                            @foreach($colors as $color)
-                                @php
-                                    $colorKey = \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($color));
-                                    $swatch = match ($colorKey) {
-                                        'den', 'black' => '#1f2937',
-                                        'trang', 'white' => '#ffffff',
-                                        'do', 'red' => '#dc2626',
-                                        'xanh', 'blue' => '#2563eb',
-                                        'xanh la', 'green' => '#16a34a',
-                                        'vang', 'yellow' => '#eab308',
-                                        'hong', 'pink' => '#ec4899',
-                                        'tim', 'purple' => '#7c3aed',
-                                        'nau', 'brown' => '#92400e',
-                                        'be', 'kem', 'cream' => '#d6c4a8',
-                                        default => '#9ca3af',
-                                    };
-                                @endphp
-                                <label class="cursor-pointer" title="{{ $color }}" aria-label="Màu {{ $color }}">
-                                    <input type="radio" name="color" value="{{ $color }}" class="peer sr-only" @checked(request('color') === $color)>
-                                    <span class="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 transition peer-checked:ring-2 peer-checked:ring-[color:var(--accent)] peer-checked:ring-offset-2" style="background-color: {{ $swatch }}">
-                                        <span class="sr-only">{{ $color }}</span>
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </fieldset>
                     <div class="space-y-2 pt-1">
                         <label class="flex cursor-pointer items-center gap-2 font-medium text-[color:var(--primary)]">
                             <input type="checkbox" name="in_stock" value="1" class="rounded border-[color:var(--line-soft)] text-[color:var(--accent)]" @checked(request()->boolean('in_stock'))>

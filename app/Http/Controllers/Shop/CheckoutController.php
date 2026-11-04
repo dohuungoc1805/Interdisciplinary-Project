@@ -24,12 +24,26 @@ class CheckoutController extends Controller
         if ($cart->items->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
-        $totals = $this->cartService->getTotals($cart);
+        $selectedItemIds = collect((array) request()->query('items', []))
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        if ($selectedItemIds->isEmpty()) {
+            $selectedItemIds = $cart->items->pluck('id')->values();
+        }
+        $selectedItems = $cart->items->whereIn('id', $selectedItemIds)->values();
+        if ($selectedItems->isEmpty() || $selectedItems->count() !== $selectedItemIds->count()) {
+            return redirect()->route('cart.index')->with('error', 'Vui lòng chọn sản phẩm còn trong giỏ hàng.');
+        }
+        $selectedItemIds = $selectedItemIds->all();
+        $totals = $this->cartService->getTotals($cart, $selectedItemIds);
+        $cart->setRelation('items', $selectedItems);
         $addresses = auth()->user()->addresses()->orderByDesc('is_default')->get();
 
         $bankTransferAvailable = $this->bankTransferPaymentService->isConfigured();
 
-        return view('shop.checkout', compact('cart', 'totals', 'addresses', 'bankTransferAvailable'));
+        return view('shop.checkout', compact('cart', 'totals', 'addresses', 'bankTransferAvailable', 'selectedItemIds'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -50,6 +64,8 @@ class CheckoutController extends Controller
             'country' => 'nullable|string|size:2',
             'customer_note' => 'nullable|string|max:1000',
             'payment_method' => 'required|in:cod,bank_transfer',
+            'items' => 'required|array|min:1',
+            'items.*' => 'required|integer|distinct|exists:cart_items,id',
         ];
         $data = $request->validate($rules);
         if ($data['payment_method'] === 'bank_transfer' && ! $this->bankTransferPaymentService->isConfigured()) {
@@ -65,7 +81,12 @@ class CheckoutController extends Controller
             }
         }
         $cart = $this->cartService->getOrCreateForUser($user->id);
-        if ($cart->items->isEmpty()) {
+        $selectedItemIds = collect($data['items'])->map(fn ($id) => (int) $id)->unique()->values();
+        $ownedItemCount = $cart->items()->whereIn('id', $selectedItemIds)->count();
+        if ($ownedItemCount !== $selectedItemIds->count()) {
+            return redirect()->route('cart.index')->with('error', 'Một số sản phẩm đã không còn trong giỏ hàng.');
+        }
+        if ($selectedItemIds->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
         try {
@@ -85,6 +106,7 @@ class CheckoutController extends Controller
                 ] : null,
                 $data['customer_note'] ?? null,
                 $data['payment_method'],
+                $selectedItemIds->all(),
             );
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage())->withInput();

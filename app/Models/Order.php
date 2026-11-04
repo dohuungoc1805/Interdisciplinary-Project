@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Order extends Model
 {
@@ -16,6 +17,8 @@ class Order extends Model
         'payment_method',
         'payment_status',
         'payment_confirmed_at',
+        'payment_proof_path',
+        'payment_proof_submitted_at',
         'subtotal',
         'discount_total',
         'shipping_discount_total',
@@ -46,6 +49,7 @@ class Order extends Model
             'shipping' => 'decimal:2',
             'total' => 'decimal:2',
             'payment_confirmed_at' => 'datetime',
+            'payment_proof_submitted_at' => 'datetime',
         ];
     }
 
@@ -84,5 +88,17 @@ class Order extends Model
         }
 
         return $this->payment_status === 'paid' ? 'Đã xác nhận thanh toán' : 'Chờ xác nhận thanh toán';
+    }
+
+    public function paymentProofUrl(): ?string
+    {
+        if (! $this->payment_proof_path) {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $this->payment_proof_path)) {
+            return $this->payment_proof_path;
+        }
+
+        return Storage::disk('public')->url($this->payment_proof_path);
     }
 }

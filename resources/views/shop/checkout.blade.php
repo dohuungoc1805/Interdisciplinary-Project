@@ -15,6 +15,9 @@
     </nav>
 
     <form id="checkout-form" method="post" action="{{ route('checkout.store') }}" class="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">@csrf
+        @foreach($selectedItemIds as $selectedItemId)
+            <input type="hidden" name="items[]" value="{{ $selectedItemId }}" />
+        @endforeach
         <div class="space-y-6">
             <section class="shop-shell space-y-4 p-5 sm:p-6" aria-labelledby="shipping-title">
                 <div><h2 id="shipping-title" class="text-lg font-semibold text-[color:var(--primary)]">Thông tin giao hàng</h2><p class="mt-1 text-sm text-[color:var(--text-muted)]">Chọn địa chỉ đã lưu hoặc nhập địa chỉ mới cho đơn này.</p></div>

@@ -23,6 +23,20 @@
                     <span class="text-xs font-medium text-emerald-700">Đã xác nhận: {{ $order->payment_confirmed_at->format('d/m/Y H:i') }}</span>
                 @endif
             </div>
+            @if($order->payment_method === 'bank_transfer' && $order->payment_proof_path)
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-semibold text-slate-800">Ảnh khách hàng gửi để đối soát</h3>
+                            <p class="mt-1 text-xs text-slate-500">Gửi lúc {{ $order->payment_proof_submitted_at?->format('d/m/Y H:i') }}</p>
+                        </div>
+                        <a href="{{ $order->paymentProofUrl() }}" target="_blank" rel="noopener" class="admin-btn-outline text-sm">Mở ảnh đầy đủ</a>
+                    </div>
+                    <img src="{{ $order->paymentProofUrl() }}" alt="Ảnh xác nhận chuyển khoản của khách hàng" class="mt-3 max-h-96 max-w-full rounded-lg border border-amber-200 bg-white object-contain" />
+                </div>
+            @elseif($order->payment_method === 'bank_transfer' && $order->payment_status !== 'paid')
+                <p class="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Khách hàng chưa tải ảnh xác nhận chuyển khoản.</p>
+            @endif
             <form method="post" action="{{ route('admin.orders.update', $order) }}" class="space-y-4">@csrf @method('PATCH')
                 <div>
                     <label class="admin-label" for="status">Trạng thái</label>

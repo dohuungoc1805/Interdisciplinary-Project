@@ -47,15 +47,11 @@ class ProductController extends Controller
             $q->where('price', '<=', (float) $request->get('max'));
         }
         $size = trim((string) $request->query('size', ''));
-        $color = trim((string) $request->query('color', ''));
         $onlyInStock = $request->boolean('in_stock');
-        if ($size !== '' || $color !== '' || $onlyInStock) {
-            $q->whereHas('variants', function ($variantQuery) use ($size, $color, $onlyInStock) {
+        if ($size !== '' || $onlyInStock) {
+            $q->whereHas('variants', function ($variantQuery) use ($size, $onlyInStock) {
                 if ($size !== '') {
                     $variantQuery->where('size', $size);
-                }
-                if ($color !== '') {
-                    $variantQuery->where('color', $color);
                 }
                 if ($onlyInStock) {
                     $variantQuery->where('stock', '>', 0);
@@ -103,9 +99,8 @@ class ProductController extends Controller
             ->get();
         $activeVariants = ProductVariant::query()->whereHas('product', fn ($productQuery) => $productQuery->where('is_active', true));
         $sizes = (clone $activeVariants)->where('size', '!=', '')->distinct()->orderBy('size')->pluck('size');
-        $colors = (clone $activeVariants)->where('color', '!=', '')->distinct()->orderBy('color')->pluck('color');
 
-        return view('shop.products.index', compact('products', 'categories', 'sizes', 'colors', 'onlyNew', 'hasFuzzyResults', 'selectedCategory'));
+        return view('shop.products.index', compact('products', 'categories', 'sizes', 'onlyNew', 'hasFuzzyResults', 'selectedCategory'));
     }
 
     public function show(

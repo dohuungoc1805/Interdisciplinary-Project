@@ -15,6 +15,7 @@ class Review extends Model
         'rating',
         'comment',
         'image_path',
+        'media_type',
         'admin_reply',
         'admin_replied_at',
         'is_approved',
@@ -54,5 +55,15 @@ class Review extends Model
         }
 
         return Storage::disk('public')->url($this->image_path);
+    }
+
+    public function mediaUrl(): ?string
+    {
+        return $this->imageUrl();
+    }
+
+    public function isVideo(): bool
+    {
+        return $this->media_type === 'video';
     }
 }

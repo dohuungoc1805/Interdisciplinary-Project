@@ -107,7 +107,7 @@
         </form>
 
         <div class="admin-table-wrap overflow-x-auto">
-            <table class="admin-table">
+            <table class="admin-table admin-products-table">
                 <thead>
                     <tr>
                         <th class="w-10"><span class="sr-only">Chọn</span></th>
@@ -125,8 +125,8 @@
                         <tr>
                             <td><input type="checkbox" name="product_ids[]" value="{{ $p->id }}" form="bulk-product-form" class="product-checkbox rounded border-slate-300 text-blue-600"></td>
                             <td><img src="{{ $p->mainImageUrl() }}" alt="" class="h-12 w-10 border border-slate-200 object-cover" /></td>
-                            <td>
-                                <a href="{{ route('products.show', $p->slug) }}" class="font-semibold text-slate-900 hover:text-orange-600" target="_blank" rel="noopener">{{ $p->name }}</a>
+                            <td class="admin-product-name-cell">
+                                <a href="{{ route('products.show', $p->slug) }}" class="admin-product-name" title="{{ $p->name }}" target="_blank" rel="noopener">{{ $p->name }}</a>
                                 @if($p->sku)<p class="mt-1 font-mono text-xs text-slate-500">{{ $p->sku }}</p>@endif
                                 <div class="mt-1 space-x-1 text-xs">
                                     @if($p->is_hot)<span class="rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900">Hot</span>@endif
